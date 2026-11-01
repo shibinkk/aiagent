@@ -800,9 +800,11 @@ body {
   align-items: center;
   gap: 5px;
   transition: all 0.2s ease;
+  text-decoration: none;
 }
 
-.city-pill:hover {
+.city-pill:hover,
+.city-pill.active {
   background: var(--primary);
   color: #ffffff;
   border-color: var(--primary);

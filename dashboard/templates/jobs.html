@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}All Jobs — Tailwindadmin{% endblock %}
+{% block title %}All Jobs — Admin{% endblock %}
 
 {% block content %}
 <!-- Page Header -->
@@ -13,12 +13,12 @@
 <!-- Filters Bar Card -->
 <div class="modern-card" style="padding:16px 20px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;">
   <div style="display:flex;gap:8px;flex-wrap:wrap;">
-    <a href="{{ url_for('jobs') }}" class="city-pill {% if not status_filter %}active{% endif %}" style="text-decoration:none;{% if not status_filter %}background:var(--primary);color:#fff;border-color:var(--primary);{% endif %}">All</a>
-    <a href="{{ url_for('jobs', status='found') }}" class="city-pill" style="text-decoration:none;{% if status_filter == 'found' %}background:var(--primary);color:#fff;border-color:var(--primary);{% endif %}">Found</a>
-    <a href="{{ url_for('jobs', status='scored') }}" class="city-pill" style="text-decoration:none;{% if status_filter == 'scored' %}background:var(--primary);color:#fff;border-color:var(--primary);{% endif %}">Scored</a>
-    <a href="{{ url_for('jobs', status='pending_approval') }}" class="city-pill" style="text-decoration:none;{% if status_filter == 'pending_approval' %}background:var(--primary);color:#fff;border-color:var(--primary);{% endif %}">Pending</a>
-    <a href="{{ url_for('jobs', status='applied') }}" class="city-pill" style="text-decoration:none;{% if status_filter == 'applied' %}background:var(--primary);color:#fff;border-color:var(--primary);{% endif %}">Applied</a>
-    <a href="{{ url_for('jobs', status='interview') }}" class="city-pill" style="text-decoration:none;{% if status_filter == 'interview' %}background:var(--primary);color:#fff;border-color:var(--primary);{% endif %}">Interview</a>
+    <a href="{{ url_for('jobs') }}" class="city-pill {% if not status_filter %}active{% endif %}">All</a>
+    <a href="{{ url_for('jobs', status='found') }}" class="city-pill {% if status_filter == 'found' %}active{% endif %}">Found</a>
+    <a href="{{ url_for('jobs', status='scored') }}" class="city-pill {% if status_filter == 'scored' %}active{% endif %}">Scored</a>
+    <a href="{{ url_for('jobs', status='pending_approval') }}" class="city-pill {% if status_filter == 'pending_approval' %}active{% endif %}">Pending</a>
+    <a href="{{ url_for('jobs', status='applied') }}" class="city-pill {% if status_filter == 'applied' %}active{% endif %}">Applied</a>
+    <a href="{{ url_for('jobs', status='interview') }}" class="city-pill {% if status_filter == 'interview' %}active{% endif %}">Interview</a>
   </div>
 
   <div style="position:relative;min-width:260px;">
