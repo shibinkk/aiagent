@@ -37,21 +37,27 @@
         <th>Platform</th>
         <th>AI Match Score</th>
         <th>Status</th>
-        <th>Date</th>
-        <th>Actions</th>
+        <th>Website Link</th>
+        <th>AI Analysis</th>
       </tr>
     </thead>
     <tbody>
       {% for job in jobs %}
+      {% set clean_co = (job.company or '')|lower|replace(' pvt ltd', '')|replace(' private limited', '')|replace(' limited', '')|replace(' ltd', '')|replace(' inc.', '')|replace(' inc', '')|replace(' llc', '')|replace(' ', '')|replace('.', '')|replace('-', '') %}
       <tr class="job-row" data-title="{{ job.title|lower }}" data-company="{{ job.company|lower }}">
         <td>
           <div class="company-cell">
             <div class="company-avatar-box">
-              {{ (job.company or 'J')[:1]|upper }}
+              <img src="https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://{{ clean_co }}.com&size=64" 
+                   alt="{{ job.company }}" 
+                   class="company-logo-img"
+                   onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+                   loading="lazy">
+              <span class="company-initial-fallback" style="display:none;">{{ (job.company or 'J')[:1]|upper }}</span>
             </div>
             <div>
               {% if job.job_url %}
-                <a href="{{ job.job_url }}" target="_blank" class="job-title-link">{{ job.title }}</a>
+                <a href="{{ job.job_url }}" target="_blank" class="job-title-link" title="Open Job Posting">{{ job.title }}</a>
               {% else %}
                 <span class="job-title-link">{{ job.title }}</span>
               {% endif %}
@@ -87,15 +93,22 @@
         <td>
           <span class="status-pill {{ job.status }}">{{ job.status.replace('_',' ').title() }}</span>
         </td>
-        <td style="color:var(--text-muted);font-size:12.5px;white-space:nowrap;">
-          {{ job.date_found[:10] if job.date_found else '—' }}
+        <td>
+          {% if job.job_url %}
+            <a href="{{ job.job_url }}" target="_blank" class="btn-visit-website" title="Open official job posting on {{ job.platform.title() }}">
+              <span>Visit Job ↗</span>
+            </a>
+          {% else %}
+            <span class="btn-visit-website disabled">Direct</span>
+          {% endif %}
         </td>
         <td>
           {% if job.ai_summary %}
-          <button class="table-action-btn" onclick="showModal(`{{ job.title|e }}`, `{{ job.ai_summary|e }}`, `{{ (job.cover_letter or '')|e }}`)" title="AI Analysis">💡</button>
-          {% endif %}
-          {% if job.job_url %}
-          <a href="{{ job.job_url }}" target="_blank" class="table-action-btn" title="Open Job">🔗</a>
+            <button class="btn-ai-analysis" onclick="showModal(`{{ job.title|e }}`, `{{ job.ai_summary|e }}`, `{{ (job.cover_letter or '')|e }}`)" title="View AI Match Analysis & Tailored Cover Letter">
+              <span>💡 Fit Details</span>
+            </button>
+          {% else %}
+            <span style="color:var(--text-muted);font-size:12px;">—</span>
           {% endif %}
         </td>
       </tr>
