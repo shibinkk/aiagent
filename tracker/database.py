@@ -10,19 +10,16 @@ from pathlib import Path
 from loguru import logger
 
 
-DB_PATH = Path("data/jobs.db")
-
-
-def get_connection() -> sqlite3.Connection:
-    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(str(DB_PATH), check_same_thread=False)
-    conn.row_factory = sqlite3.Row
-    return conn
+DB_PATH = Path(__file__).resolve().parent.parent / "data" / "jobs.db"
+_db_initialized = False
 
 
 def init_db():
     """Create tables if they don't exist."""
-    conn = get_connection()
+    global _db_initialized
+    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+    conn = sqlite3.connect(str(DB_PATH), check_same_thread=False)
+    conn.row_factory = sqlite3.Row
     cur = conn.cursor()
 
     cur.executescript("""
@@ -66,7 +63,18 @@ def init_db():
 
     conn.commit()
     conn.close()
+    _db_initialized = True
     logger.info("Database initialised at {}", DB_PATH)
+
+
+def get_connection() -> sqlite3.Connection:
+    global _db_initialized
+    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+    if not _db_initialized:
+        init_db()
+    conn = sqlite3.connect(str(DB_PATH), check_same_thread=False)
+    conn.row_factory = sqlite3.Row
+    return conn
 
 
 def make_hash(title: str, company: str, platform: str) -> str:
@@ -227,11 +235,18 @@ def get_stats_summary() -> dict:
     """Returns overall stats for the dashboard."""
     conn = get_connection()
     stats = {}
-    for status in ("found", "scored", "applied", "interview", "rejected"):
+    for status in ("found", "scored", "applied", "interview", "rejected", "pending_approval"):
         row = conn.execute(
             "SELECT COUNT(*) as cnt FROM jobs WHERE status=?", (status,)
         ).fetchone()
         stats[status] = row["cnt"] if row else 0
+
+    # Include queue pending count
+    try:
+        q_row = conn.execute("SELECT COUNT(*) as cnt FROM approval_queue WHERE status='pending'").fetchone()
+        stats["pending_approval"] = max(stats.get("pending_approval", 0), (q_row["cnt"] if q_row else 0))
+    except Exception:
+        pass
 
     # Weekly trend
     rows = conn.execute("""

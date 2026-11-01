@@ -5,12 +5,15 @@ Flask web dashboard for the AI Job Search Agent.
 
 import os
 import sys
+import threading
+import yaml
 
 # Ensure project root is on path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from flask import Flask, render_template, jsonify, request, redirect, url_for
 from tracker.database import (
+    init_db,
     get_jobs, get_stats_summary, get_pending_approvals,
     update_job_status, approve_job, reject_job, get_daily_stats
 )
@@ -18,8 +21,46 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+# Initialize SQLite database tables immediately on startup
+init_db()
+
 app = Flask(__name__)
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "dev-secret-key-change-me")
+
+_scraping_in_progress = False
+
+
+def _run_bg_scrape():
+    global _scraping_in_progress
+    try:
+        from scraper import scrape_all_platforms
+        from filter import filter_jobs
+        from tracker.database import insert_job, increment_stat
+
+        cfg_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "config.yaml"))
+        config = {}
+        if os.path.exists(cfg_path):
+            with open(cfg_path, "r", encoding="utf-8") as f:
+                config = yaml.safe_load(f)
+        if not config:
+            config = {
+                "job_search": {
+                    "roles": ["QA Engineer", "SDET", "Software Tester"],
+                    "locations": ["Kochi", "Bangalore", "Chennai"],
+                    "results_per_platform": 15
+                },
+                "platforms": {"linkedin": True, "indeed": True, "glassdoor": False, "naukri": False, "internshala": False}
+            }
+
+        raw_jobs = scrape_all_platforms(config)
+        filtered = filter_jobs(raw_jobs, config)
+        for job in filtered:
+            if insert_job(job):
+                increment_stat("jobs_found")
+    except Exception as e:
+        print(f"Background scrape error: {e}")
+    finally:
+        _scraping_in_progress = False
 
 
 @app.route("/")
@@ -82,6 +123,23 @@ def update_status(job_id: int):
         update_job_status(job_id, new_status)
         return jsonify({"success": True})
     return jsonify({"error": "No status provided"}), 400
+
+
+@app.route("/api/scrape_now", methods=["POST", "GET"])
+def api_scrape_now():
+    global _scraping_in_progress
+    if _scraping_in_progress:
+        return jsonify({"status": "running", "message": "Job search is currently active in the background."})
+    _scraping_in_progress = True
+    t = threading.Thread(target=_run_bg_scrape, daemon=True)
+    t.start()
+    return jsonify({"status": "started", "message": "Search started in background! Check back in 30 seconds."})
+
+
+@app.route("/api/scrape_status")
+def api_scrape_status():
+    global _scraping_in_progress
+    return jsonify({"running": _scraping_in_progress})
 
 
 if __name__ == "__main__":

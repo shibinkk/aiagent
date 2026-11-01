@@ -9,9 +9,14 @@
     <h1 class="page-title">Good day, Shibin! 👋</h1>
     <p class="page-subtitle">Here's your job search overview for today</p>
   </div>
-  <div class="header-pill">
-    <div class="header-pill-dot"></div>
-    <span id="last-updated">Live</span>
+  <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+    <button id="scrape-btn" onclick="triggerScrape()" style="background:var(--primary);color:#fff;border:none;padding:9px 18px;border-radius:10px;font-weight:600;font-size:13px;cursor:pointer;display:flex;align-items:center;gap:6px;box-shadow:0 2px 8px rgba(79,70,229,0.25);transition:all .2s ease;">
+      ⚡ <span id="scrape-btn-text">Search Jobs Now</span>
+    </button>
+    <div class="header-pill">
+      <div class="header-pill-dot"></div>
+      <span id="last-updated">Live</span>
+    </div>
   </div>
 </div>
 
@@ -222,6 +227,37 @@
       platChart.data.datasets[0].data = Object.values(c);
       platChart.update('none');
     } catch(e) {}
+  }
+
+  async function triggerScrape() {
+    const btn = document.getElementById('scrape-btn');
+    const text = document.getElementById('scrape-btn-text');
+    btn.disabled = true;
+    btn.style.opacity = '0.7';
+    text.textContent = 'Searching...';
+    try {
+      const res = await fetch('/api/scrape_now', { method: 'POST' });
+      const data = await res.json();
+      text.textContent = 'Searching...';
+      const poll = setInterval(async () => {
+        try {
+          const st = await fetch('/api/scrape_status').then(r => r.json());
+          if (!st.running) {
+            clearInterval(poll);
+            btn.disabled = false;
+            btn.style.opacity = '1';
+            text.textContent = 'Search Jobs Now';
+            refreshStats();
+            loadPlatformData();
+            setTimeout(() => window.location.reload(), 1000);
+          }
+        } catch(e) {}
+      }, 4000);
+    } catch(err) {
+      btn.disabled = false;
+      btn.style.opacity = '1';
+      text.textContent = 'Search Jobs Now';
+    }
   }
 
   refreshStats();
