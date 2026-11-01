@@ -1,55 +1,63 @@
 {% extends "base.html" %}
-{% block title %}Approval Queue — AI Job Agent{% endblock %}
+{% block title %}Approvals — Tailwindadmin{% endblock %}
 
 {% block content %}
-<div class="page-header">
-  <div>
-    <h1 class="page-title">Approval Queue</h1>
-    <p class="page-subtitle">Review and approve jobs before applying</p>
+<div class="card-top-bar" style="margin-bottom:24px;">
+  <div class="card-title-group">
+    <h2>Review & Approvals Queue</h2>
+    <p>Handpick and approve applications before the automated bot submits them</p>
   </div>
 </div>
 
 {% if jobs %}
-<div class="approvals-grid">
+<div style="display:grid;grid-template-columns:repeat(auto-fill, minmax(360px, 1fr));gap:20px;">
   {% for job in jobs %}
-  <div class="approval-card">
-    <div class="approval-header">
-      <div>
-        <h3 class="approval-title">{{ job.title }}</h3>
-        <p class="approval-company">🏢 {{ job.company }} &nbsp;•&nbsp; 📍 {{ job.location or '—' }}</p>
+  <div class="modern-card" style="display:flex;flex-direction:column;justify-content:space-between;">
+    <div>
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">
+        <div>
+          <h3 style="font-size:16px;font-weight:700;color:var(--text-dark);line-height:1.3;">{{ job.title }}</h3>
+          <p style="font-size:12.5px;color:var(--text-muted);margin-top:4px;">🏢 {{ job.company }} &nbsp;•&nbsp; 📍 {{ job.location or 'India' }}</p>
+        </div>
+        <div style="background:var(--primary-light);color:var(--primary);font-weight:800;font-size:14px;padding:6px 12px;border-radius:var(--radius-pill);border:1px solid rgba(93,135,255,0.25);">
+          {{ "%.0f"|format(job.ai_score or 0) }}%
+        </div>
       </div>
-      <div class="score-circle {% if job.ai_score >= 80 %}high{% elif job.ai_score >= 65 %}mid{% else %}low{% endif %}">
-        {{ "%.0f"|format(job.ai_score or 0) }}
+
+      <div style="display:flex;gap:8px;margin-bottom:14px;">
+        <span class="platform-pill {{ job.platform }}">{{ job.platform.title() }}</span>
+        <span style="font-size:11.5px;color:var(--text-muted);align-self:center;">Found {{ job.date_found[:10] if job.date_found else '—' }}</span>
       </div>
-    </div>
-    <div class="approval-meta">
-      <span class="platform-badge {{ job.platform }}">{{ job.platform.title() }}</span>
-      <span class="text-muted text-sm">Found {{ job.date_found[:10] if job.date_found else '—' }}</span>
-    </div>
-    {% if job.ai_summary %}
-    <p class="approval-summary">{{ job.ai_summary[:250] }}</p>
-    {% endif %}
-    {% if job.cover_letter %}
-    <details class="cover-letter-details">
-      <summary>View Cover Letter</summary>
-      <pre class="cover-letter-text">{{ job.cover_letter[:800] }}</pre>
-    </details>
-    {% endif %}
-    <div class="approval-actions">
-      {% if job.job_url %}
-      <a href="{{ job.job_url }}" target="_blank" class="btn btn-outline">🔗 View Job</a>
+
+      {% if job.ai_summary %}
+      <div style="background:var(--bg-surface-alt);border:1px solid var(--border-color);border-radius:var(--radius-sm);padding:12px;font-size:12.5px;color:var(--text-body);line-height:1.5;margin-bottom:14px;">
+        {{ job.ai_summary[:240] }}...
+      </div>
       {% endif %}
-      <a href="{{ url_for('reject', queue_id=job.queue_id) }}" class="btn btn-danger">❌ Skip</a>
-      <a href="{{ url_for('approve', queue_id=job.queue_id) }}" class="btn btn-success">✅ Approve</a>
+
+      {% if job.cover_letter %}
+      <details style="margin-bottom:16px;cursor:pointer;">
+        <summary style="font-size:12.5px;font-weight:600;color:var(--primary);">✉️ Preview Cover Letter</summary>
+        <pre class="modal-pre-box" style="margin-top:8px;max-height:160px;overflow-y:auto;font-size:11.5px;">{{ job.cover_letter }}</pre>
+      </details>
+      {% endif %}
+    </div>
+
+    <div style="display:flex;gap:10px;margin-top:14px;border-top:1px solid var(--border-subtle);padding-top:14px;">
+      {% if job.job_url %}
+      <a href="{{ job.job_url }}" target="_blank" class="city-pill" style="text-decoration:none;font-weight:700;">🔗 View</a>
+      {% endif %}
+      <a href="{{ url_for('reject', queue_id=job.queue_id) }}" class="city-pill" style="text-decoration:none;background:var(--coral-light);color:var(--coral);border-color:#fcd6cc;margin-left:auto;">❌ Skip</a>
+      <a href="{{ url_for('approve', queue_id=job.queue_id) }}" class="city-pill" style="text-decoration:none;background:var(--teal);color:#ffffff;border-color:var(--teal);">✅ Approve & Apply</a>
     </div>
   </div>
   {% endfor %}
 </div>
 {% else %}
-<div class="card empty-state-card">
-  <div class="empty-icon">✋</div>
-  <h2>No pending approvals</h2>
-  <p>When the agent finds high-score jobs, they'll appear here for your review before applying.</p>
+<div class="modern-card" style="text-align:center;padding:64px 24px;">
+  <div style="font-size:48px;margin-bottom:16px;">✋</div>
+  <h2 style="font-size:20px;font-weight:700;color:var(--text-dark);margin-bottom:8px;">No pending approvals</h2>
+  <p style="font-size:14px;color:var(--text-muted);max-width:440px;margin:0 auto;">When the AI agent discovers high-match SDET jobs, they will appear here for your one-click approval before applying.</p>
 </div>
 {% endif %}
 {% endblock %}

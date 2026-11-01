@@ -1,102 +1,130 @@
 {% extends "base.html" %}
-{% block title %}All Jobs — AI Job Agent{% endblock %}
+{% block title %}All Jobs — Tailwindadmin{% endblock %}
 
 {% block content %}
-<div class="page-header">
-  <div>
-    <h1 class="page-title">All Jobs</h1>
-    <p class="page-subtitle">Browse and filter every discovered job</p>
+<!-- Page Header -->
+<div class="card-top-bar" style="margin-bottom:20px;">
+  <div class="card-title-group">
+    <h2>All Discovered Jobs</h2>
+    <p>Browse, filter and manage every opportunity captured across portals</p>
   </div>
 </div>
 
-<!-- Filters -->
-<div class="filters-bar card">
-  <a href="{{ url_for('jobs') }}" class="filter-btn {% if not status_filter %}active{% endif %}">All</a>
-  <a href="{{ url_for('jobs', status='found') }}" class="filter-btn {% if status_filter == 'found' %}active{% endif %}">Found</a>
-  <a href="{{ url_for('jobs', status='scored') }}" class="filter-btn {% if status_filter == 'scored' %}active{% endif %}">Scored</a>
-  <a href="{{ url_for('jobs', status='pending_approval') }}" class="filter-btn {% if status_filter == 'pending_approval' %}active{% endif %}">Pending</a>
-  <a href="{{ url_for('jobs', status='applied') }}" class="filter-btn {% if status_filter == 'applied' %}active{% endif %}">Applied</a>
-  <a href="{{ url_for('jobs', status='interview') }}" class="filter-btn {% if status_filter == 'interview' %}active{% endif %}">Interview</a>
-  <a href="{{ url_for('jobs', status='rejected') }}" class="filter-btn {% if status_filter == 'rejected' %}active{% endif %}">Rejected</a>
-  <input type="text" id="search-input" class="search-input" placeholder="🔍 Search title / company...">
+<!-- Filters Bar Card -->
+<div class="modern-card" style="padding:16px 20px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;">
+  <div style="display:flex;gap:8px;flex-wrap:wrap;">
+    <a href="{{ url_for('jobs') }}" class="city-pill {% if not status_filter %}active{% endif %}" style="text-decoration:none;{% if not status_filter %}background:var(--primary);color:#fff;border-color:var(--primary);{% endif %}">All</a>
+    <a href="{{ url_for('jobs', status='found') }}" class="city-pill" style="text-decoration:none;{% if status_filter == 'found' %}background:var(--primary);color:#fff;border-color:var(--primary);{% endif %}">Found</a>
+    <a href="{{ url_for('jobs', status='scored') }}" class="city-pill" style="text-decoration:none;{% if status_filter == 'scored' %}background:var(--primary);color:#fff;border-color:var(--primary);{% endif %}">Scored</a>
+    <a href="{{ url_for('jobs', status='pending_approval') }}" class="city-pill" style="text-decoration:none;{% if status_filter == 'pending_approval' %}background:var(--primary);color:#fff;border-color:var(--primary);{% endif %}">Pending</a>
+    <a href="{{ url_for('jobs', status='applied') }}" class="city-pill" style="text-decoration:none;{% if status_filter == 'applied' %}background:var(--primary);color:#fff;border-color:var(--primary);{% endif %}">Applied</a>
+    <a href="{{ url_for('jobs', status='interview') }}" class="city-pill" style="text-decoration:none;{% if status_filter == 'interview' %}background:var(--primary);color:#fff;border-color:var(--primary);{% endif %}">Interview</a>
+  </div>
+
+  <div style="position:relative;min-width:260px;">
+    <input type="text" id="search-input" placeholder="🔍 Search title, company..." style="width:100%;padding:8px 16px;border-radius:var(--radius-pill);border:1px solid var(--border-color);background:var(--bg-surface-alt);outline:none;font-size:13px;font-family:inherit;">
+  </div>
 </div>
 
-<!-- Jobs Table -->
-<div class="card">
-  <table class="jobs-table" id="jobs-table">
+<!-- Jobs Table Card -->
+<div class="table-card">
+  <table class="custom-table" id="jobs-table">
     <thead>
       <tr>
-        <th>Title</th>
-        <th>Company</th>
+        <th>Job & Company</th>
         <th>Location</th>
         <th>Platform</th>
-        <th>AI Score</th>
+        <th>AI Match Score</th>
         <th>Status</th>
         <th>Date</th>
-        <th>Action</th>
+        <th>Actions</th>
       </tr>
     </thead>
     <tbody>
       {% for job in jobs %}
       <tr class="job-row" data-title="{{ job.title|lower }}" data-company="{{ job.company|lower }}">
         <td>
-          {% if job.job_url %}
-            <a href="{{ job.job_url }}" target="_blank" class="job-link">{{ job.title }}</a>
-          {% else %}
-            <span>{{ job.title }}</span>
-          {% endif %}
+          <div class="company-cell">
+            <div class="company-avatar-box">
+              {{ (job.company or 'J')[:1]|upper }}
+            </div>
+            <div>
+              {% if job.job_url %}
+                <a href="{{ job.job_url }}" target="_blank" class="job-title-link">{{ job.title }}</a>
+              {% else %}
+                <span class="job-title-link">{{ job.title }}</span>
+              {% endif %}
+              <div class="company-name-text">{{ job.company }}</div>
+            </div>
+          </div>
         </td>
-        <td class="text-muted">{{ job.company }}</td>
-        <td class="text-muted text-sm">{{ job.location or '—' }}</td>
-        <td><span class="platform-badge {{ job.platform }}">{{ job.platform.title() }}</span></td>
+        <td style="color:var(--text-muted);">{{ job.location or 'India / Remote' }}</td>
+        <td>
+          <span class="platform-pill {{ job.platform }}">{{ job.platform.title() }}</span>
+        </td>
         <td>
           {% if job.ai_score %}
-          <div class="score-bar-wrap">
-            <div class="score-bar" style="width:{{ job.ai_score }}%"></div>
-            <span class="score-text">{{ "%.0f"|format(job.ai_score) }}</span>
+          <div class="score-progress-wrap">
+            <div class="score-progress-track">
+              <div class="score-progress-fill" data-score="{{ job.ai_score }}"></div>
+            </div>
+            <span class="score-number-label">{{ "%.0f"|format(job.ai_score) }}%</span>
           </div>
           {% else %}
-          <span class="text-muted">—</span>
+          <span style="color:var(--text-muted);">—</span>
           {% endif %}
         </td>
-        <td><span class="status-badge {{ job.status }}">{{ job.status.replace('_',' ').title() }}</span></td>
-        <td class="text-muted text-sm">{{ job.date_found[:10] if job.date_found else '—' }}</td>
+        <td>
+          <span class="status-pill {{ job.status }}">{{ job.status.replace('_',' ').title() }}</span>
+        </td>
+        <td style="color:var(--text-muted);font-size:12.5px;">
+          {{ job.date_found[:10] if job.date_found else '—' }}
+        </td>
         <td>
           {% if job.ai_summary %}
-          <button class="btn-icon" onclick="showDetails({{ job.id }}, `{{ job.title|e }}`, `{{ job.ai_summary|e }}`, `{{ (job.cover_letter or '')|truncate(500)|e }}`)" title="View AI Details">💡</button>
+          <button class="table-action-btn" onclick="showModal(`{{ job.title|e }}`, `{{ job.ai_summary|e }}`, `{{ (job.cover_letter or '')|e }}`)" title="AI Analysis">💡</button>
           {% endif %}
           {% if job.job_url %}
-          <a href="{{ job.job_url }}" target="_blank" class="btn-icon" title="Open Job">🔗</a>
+          <a href="{{ job.job_url }}" target="_blank" class="table-action-btn" title="Open Job">🔗</a>
           {% endif %}
         </td>
       </tr>
       {% else %}
-      <tr><td colspan="8" class="empty-state">No jobs to show.</td></tr>
+      <tr>
+        <td colspan="7" style="text-align:center;padding:48px 20px;color:var(--text-muted);">
+          No jobs found. Click <strong>Search Jobs Now</strong> in the top header to discover fresh jobs!
+        </td>
+      </tr>
       {% endfor %}
     </tbody>
   </table>
 </div>
 
-<!-- Detail Modal -->
-<div class="modal-overlay" id="modal-overlay" onclick="closeModal()">
-  <div class="modal" onclick="event.stopPropagation()">
-    <button class="modal-close" onclick="closeModal()">✕</button>
-    <h2 id="modal-title" class="modal-job-title"></h2>
-    <div class="modal-section">
-      <h4>🧠 AI Analysis</h4>
-      <p id="modal-summary"></p>
-    </div>
-    <div class="modal-section">
-      <h4>✉️ Cover Letter</h4>
-      <pre id="modal-cover"></pre>
-    </div>
+<!-- Modal Popup -->
+<div class="modal-overlay" id="detail-modal" onclick="closeModal()">
+  <div class="modal-box" onclick="event.stopPropagation()">
+    <button class="modal-close-btn" onclick="closeModal()">✕</button>
+    <h2 id="modal-job-title" style="font-size:18px;font-weight:800;color:var(--text-dark);margin-bottom:12px;"></h2>
+    <div class="modal-section-title">🧠 AI Match Analysis</div>
+    <p id="modal-ai-summary" style="font-size:13.5px;color:var(--text-body);line-height:1.6;"></p>
+    
+    <div class="modal-section-title">✉️ Tailored Cover Letter</div>
+    <div class="modal-pre-box" id="modal-cover-letter"></div>
   </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script>
-  // Live search filter
+  function updateScoreBars() {
+    document.querySelectorAll('.score-progress-fill[data-score]').forEach(el => {
+      const score = parseFloat(el.getAttribute('data-score')) || 0;
+      el.style.width = Math.min(100, Math.max(0, score)) + '%';
+    });
+  }
+  updateScoreBars();
+
+  // Search input filter
   document.getElementById('search-input').addEventListener('input', function() {
     const q = this.value.toLowerCase();
     document.querySelectorAll('.job-row').forEach(row => {
@@ -105,17 +133,17 @@
     });
   });
 
-  function showDetails(id, title, summary, cover) {
-    document.getElementById('modal-title').textContent = title;
-    document.getElementById('modal-summary').textContent = summary;
-    document.getElementById('modal-cover').textContent = cover || 'No cover letter generated yet.';
-    document.getElementById('modal-overlay').classList.add('active');
+  function showModal(title, summary, coverLetter) {
+    document.getElementById('modal-job-title').textContent = title;
+    document.getElementById('modal-ai-summary').textContent = summary || 'No summary available.';
+    document.getElementById('modal-cover-letter').textContent = coverLetter || 'No cover letter generated yet.';
+    document.getElementById('detail-modal').classList.add('active');
   }
 
   function closeModal() {
-    document.getElementById('modal-overlay').classList.remove('active');
+    document.getElementById('detail-modal').classList.remove('active');
   }
 
-  document.addEventListener('keydown', e => { if(e.key === 'Escape') closeModal(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
 </script>
 {% endblock %}

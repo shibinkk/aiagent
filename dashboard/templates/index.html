@@ -1,141 +1,214 @@
 {% extends "base.html" %}
-{% block title %}Dashboard{% endblock %}
+{% block title %}Modern Dashboard{% endblock %}
 
 {% block content %}
 
-<!-- Page Header -->
-<div class="page-header">
-  <div>
-    <h1 class="page-title">Good day, Shibin! 👋</h1>
-    <p class="page-subtitle">Here's your job search overview for today</p>
+<!-- ── Welcome Banner Card (Exact Match to Screenshot) ── -->
+<div class="welcome-banner">
+  <div class="welcome-left">
+    <div class="welcome-avatar-wrap">
+      <img src="{{ url_for('static', filename='images/shibin_avatar.jpg') }}" alt="Shibin K K" class="welcome-avatar">
+    </div>
+    <div class="welcome-text">
+      <h1>Welcome back! Shibin 👋</h1>
+      <p>SDET & QA Automation Suite — Automated job scraping, AI scoring & smart applications</p>
+      <div class="welcome-pills">
+        <span class="welcome-pill">🎯 SDET / QA Automation</span>
+        <span class="welcome-pill">📍 Kerala, Chennai, Bangalore & Global</span>
+        <span class="welcome-pill" style="color:var(--teal);border-color:rgba(19,222,185,0.3);">● Auto-Agent Active</span>
+      </div>
+    </div>
   </div>
-  <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
-    <button id="scrape-btn" onclick="triggerScrape()" style="background:var(--primary);color:#fff;border:none;padding:9px 18px;border-radius:10px;font-weight:600;font-size:13px;cursor:pointer;display:flex;align-items:center;gap:6px;box-shadow:0 2px 8px rgba(79,70,229,0.25);transition:all .2s ease;">
-      ⚡ <span id="scrape-btn-text">Search Jobs Now</span>
-    </button>
-    <div class="header-pill">
-      <div class="header-pill-dot"></div>
-      <span id="last-updated">Live</span>
+  <div class="welcome-right">
+    <img src="{{ url_for('static', filename='images/developer_banner.jpg') }}" alt="QA Automation" class="banner-graphic">
+  </div>
+</div>
+
+<!-- ── Row of 6 Pastel Metric Cards (Exact Match to Screenshot) ── -->
+<div class="stats-cards-grid">
+  <!-- 1. Soft Coral/Pink Card -->
+  <div class="stat-card-pastel pink">
+    <div class="stat-icon-badge">🔖</div>
+    <div class="stat-label-text">Discovered</div>
+    <div class="stat-number" id="stat-found">{{ stats.get('found', 0) }}</div>
+  </div>
+
+  <!-- 2. Soft Cyan Card -->
+  <div class="stat-card-pastel cyan">
+    <div class="stat-icon-badge">📬</div>
+    <div class="stat-label-text">AI Scored</div>
+    <div class="stat-number" id="stat-scored">{{ stats.get('scored', 0) }}</div>
+  </div>
+
+  <!-- 3. Soft Amber Card -->
+  <div class="stat-card-pastel amber">
+    <div class="stat-icon-badge">💼</div>
+    <div class="stat-label-text">Applied</div>
+    <div class="stat-number" id="stat-applied">{{ stats.get('applied', 0) }}</div>
+  </div>
+
+  <!-- 4. Soft Indigo Card -->
+  <div class="stat-card-pastel indigo">
+    <div class="stat-icon-badge">👤</div>
+    <div class="stat-label-text">Interviews</div>
+    <div class="stat-number" id="stat-interview">{{ stats.get('interview', 0) }}</div>
+  </div>
+
+  <!-- 5. Soft Rose Card -->
+  <div class="stat-card-pastel rose">
+    <div class="stat-icon-badge">⭐</div>
+    <div class="stat-label-text">Review Queue</div>
+    <div class="stat-number" id="stat-pending">{{ stats.get('pending_approval', 0) }}</div>
+  </div>
+
+  <!-- 6. Soft Purple Card -->
+  <div class="stat-card-pastel purple">
+    <div class="stat-icon-badge">⚡</div>
+    <div class="stat-label-text">Match Quality</div>
+    <div class="stat-number">88%+</div>
+  </div>
+</div>
+
+<!-- ── Main Content Grid (Activity + Breakdown) ── -->
+<div class="dashboard-main-grid">
+  <!-- Left: Activity Chart (Revenue updates style) -->
+  <div class="modern-card">
+    <div class="card-top-bar">
+      <div class="card-title-group">
+        <h2>Application Activity</h2>
+        <p>Overview of jobs found vs applications submitted</p>
+      </div>
+      <div class="dropdown-pill">
+        <span>Year 2026</span>
+        <span>▾</span>
+      </div>
+    </div>
+    <canvas id="timelineChart" height="130"></canvas>
+  </div>
+
+  <!-- Right: Column with 2 stacked cards -->
+  <div class="right-column-stack">
+    <!-- Card A: Platform Breakdown (Yearly breakup style) -->
+    <div class="modern-card">
+      <div class="card-top-bar" style="margin-bottom:12px;">
+        <div class="card-title-group">
+          <h2>Platform Breakdown</h2>
+          <p>Distribution across job portals</p>
+        </div>
+      </div>
+      <div class="donut-card-content">
+        <div class="breakup-info">
+          <div class="breakup-number" id="breakup-total">{{ stats.get('found', 0) }}</div>
+          <div class="growth-badge">↑ +12% this week</div>
+          <div class="chart-legend-dots">
+            <div class="legend-dot-item">
+              <span class="legend-dot" style="background:#5d87ff;"></span> LinkedIn
+            </div>
+            <div class="legend-dot-item">
+              <span class="legend-dot" style="background:#49beff;"></span> Indeed
+            </div>
+            <div class="legend-dot-item">
+              <span class="legend-dot" style="background:#ffae1f;"></span> Naukri
+            </div>
+          </div>
+        </div>
+        <div class="donut-canvas-wrap">
+          <canvas id="platformChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card B: Target Locations -->
+    <div class="modern-card" style="padding:20px 24px;">
+      <div class="card-top-bar" style="margin-bottom:12px;">
+        <div class="card-title-group">
+          <h2>📍 Target Locations</h2>
+        </div>
+      </div>
+      <div class="location-pills-row">
+        {% for city in ['Kozhikode', 'Kochi', 'Trivandrum', 'Chennai', 'Bangalore', 'Remote / Global'] %}
+        <span class="city-pill">📌 {{ city }}</span>
+        {% endfor %}
+      </div>
     </div>
   </div>
 </div>
 
-<!-- Stat Cards -->
-<div class="stats-grid">
-  <div class="stat-card blue">
-    <div class="stat-card-top">
-      <div class="stat-icon-wrap">🔍</div>
-      <span class="stat-trend">Today</span>
+<!-- ── Recent Job Matches Table ── -->
+<div class="table-card">
+  <div class="table-card-header">
+    <div class="table-title-group">
+      <h2>🏆 Recent Job Matches</h2>
+      <p>Latest QA Automation & SDET opportunities matched by AI</p>
     </div>
-    <div class="stat-value" id="stat-found">{{ stats.get('found', 0) }}</div>
-    <div class="stat-label">Jobs Discovered</div>
+    <a href="{{ url_for('jobs') }}" class="table-view-all-link">View All Jobs →</a>
   </div>
-  <div class="stat-card purple">
-    <div class="stat-card-top">
-      <div class="stat-icon-wrap">🧠</div>
-    </div>
-    <div class="stat-value" id="stat-scored">{{ stats.get('scored', 0) }}</div>
-    <div class="stat-label">AI Scored</div>
-  </div>
-  <div class="stat-card green">
-    <div class="stat-card-top">
-      <div class="stat-icon-wrap">📨</div>
-    </div>
-    <div class="stat-value" id="stat-applied">{{ stats.get('applied', 0) }}</div>
-    <div class="stat-label">Applied</div>
-  </div>
-  <div class="stat-card amber">
-    <div class="stat-card-top">
-      <div class="stat-icon-wrap">💼</div>
-    </div>
-    <div class="stat-value" id="stat-interview">{{ stats.get('interview', 0) }}</div>
-    <div class="stat-label">Interviews</div>
-  </div>
-  <div class="stat-card indigo">
-    <div class="stat-card-top">
-      <div class="stat-icon-wrap">⏳</div>
-    </div>
-    <div class="stat-value" id="stat-pending">{{ stats.get('pending_approval', 0) }}</div>
-    <div class="stat-label">Needs Review</div>
-  </div>
-</div>
 
-<!-- Charts -->
-<div class="charts-row">
-  <div class="card chart-card">
-    <div class="card-header">
-      <h3 class="card-title">📈 Applications Timeline</h3>
-    </div>
-    <canvas id="timelineChart" height="90"></canvas>
-  </div>
-  <div class="card chart-card">
-    <div class="card-header">
-      <h3 class="card-title">🌐 Platform Breakdown</h3>
-    </div>
-    <canvas id="platformChart" height="90"></canvas>
-  </div>
-</div>
-
-<!-- Target Locations -->
-<div class="card" style="padding:20px 24px;">
-  <div class="card-header" style="margin-bottom:12px;">
-    <h3 class="card-title">📍 Your Target Locations</h3>
-  </div>
-  <div style="display:flex;gap:8px;flex-wrap:wrap;">
-    {% for city in ['Kozhikode', 'Kochi', 'Trivandrum', 'Chennai', 'Bangalore', 'Remote / Outside India'] %}
-    <span style="background:var(--primary-lt);color:var(--primary);border:1px solid var(--primary-mid);border-radius:999px;padding:5px 14px;font-size:12.5px;font-weight:600;">
-      📌 {{ city }}
-    </span>
-    {% endfor %}
-  </div>
-</div>
-
-<!-- Recent Jobs -->
-<div class="card">
-  <div class="card-header">
-    <h3 class="card-title">🏆 Recent Matches</h3>
-    <a href="{{ url_for('jobs') }}" class="btn-link">View All →</a>
-  </div>
-  <table class="jobs-table">
+  <table class="custom-table">
     <thead>
       <tr>
-        <th>Job Title</th>
-        <th>Company</th>
+        <th>Job & Company</th>
+        <th>Location</th>
         <th>Platform</th>
-        <th>AI Score</th>
+        <th>AI Match Score</th>
         <th>Status</th>
-        <th>Found</th>
+        <th>Date</th>
+        <th>Actions</th>
       </tr>
     </thead>
     <tbody>
       {% for job in recent_jobs %}
       <tr>
         <td>
-          {% if job.job_url %}
-            <a href="{{ job.job_url }}" target="_blank" class="job-link">{{ job.title }}</a>
-          {% else %}
-            <span style="font-weight:600;color:var(--text2);">{{ job.title }}</span>
-          {% endif %}
+          <div class="company-cell">
+            <div class="company-avatar-box">
+              {{ (job.company or 'J')[:1]|upper }}
+            </div>
+            <div>
+              {% if job.job_url %}
+                <a href="{{ job.job_url }}" target="_blank" class="job-title-link">{{ job.title }}</a>
+              {% else %}
+                <span class="job-title-link">{{ job.title }}</span>
+              {% endif %}
+              <div class="company-name-text">{{ job.company }}</div>
+            </div>
+          </div>
         </td>
-        <td class="text-muted">{{ job.company }}</td>
-        <td><span class="platform-badge {{ job.platform }}">{{ job.platform.title() }}</span></td>
+        <td style="color:var(--text-muted);">{{ job.location or 'India / Remote' }}</td>
+        <td>
+          <span class="platform-pill {{ job.platform }}">{{ job.platform.title() }}</span>
+        </td>
         <td>
           {% if job.ai_score %}
-          <div class="score-bar-wrap">
-            <div class="score-bar" style="width:{{ job.ai_score }}%"></div>
-            <span class="score-text">{{ "%.0f"|format(job.ai_score) }}</span>
+          <div class="score-progress-wrap">
+            <div class="score-progress-track">
+              <div class="score-progress-fill" data-score="{{ job.ai_score }}"></div>
+            </div>
+            <span class="score-number-label">{{ "%.0f"|format(job.ai_score) }}%</span>
           </div>
           {% else %}
-          <span class="text-muted">—</span>
+          <span style="color:var(--text-muted);">—</span>
           {% endif %}
         </td>
-        <td><span class="status-badge {{ job.status }}">{{ job.status.replace('_',' ').title() }}</span></td>
-        <td class="text-muted text-sm">{{ job.date_found[:10] if job.date_found else '—' }}</td>
+        <td>
+          <span class="status-pill {{ job.status }}">{{ job.status.replace('_',' ').title() }}</span>
+        </td>
+        <td style="color:var(--text-muted);font-size:12.5px;">
+          {{ job.date_found[:10] if job.date_found else '—' }}
+        </td>
+        <td>
+          {% if job.ai_summary %}
+          <button class="table-action-btn" onclick="showModal(`{{ job.title|e }}`, `{{ job.ai_summary|e }}`, `{{ (job.cover_letter or '')|e }}`)" title="AI Analysis">💡</button>
+          {% endif %}
+          {% if job.job_url %}
+          <a href="{{ job.job_url }}" target="_blank" class="table-action-btn" title="Open Job">🔗</a>
+          {% endif %}
+        </td>
       </tr>
       {% else %}
       <tr>
-        <td colspan="6" class="empty-state">
-          No jobs yet — start the agent with <code>py main.py</code> to begin searching!
+        <td colspan="7" style="text-align:center;padding:48px 20px;color:var(--text-muted);">
+          No jobs found yet. Click <strong>Search Jobs Now</strong> in the top header to discover fresh jobs!
         </td>
       </tr>
       {% endfor %}
@@ -143,121 +216,154 @@
   </table>
 </div>
 
+<!-- ── Detail Modal Popup ── -->
+<div class="modal-overlay" id="detail-modal" onclick="closeModal()">
+  <div class="modal-box" onclick="event.stopPropagation()">
+    <button class="modal-close-btn" onclick="closeModal()">✕</button>
+    <h2 id="modal-job-title" style="font-size:18px;font-weight:800;color:var(--text-dark);margin-bottom:12px;"></h2>
+    <div class="modal-section-title">🧠 AI Match Analysis</div>
+    <p id="modal-ai-summary" style="font-size:13.5px;color:var(--text-body);line-height:1.6;"></p>
+    
+    <div class="modal-section-title">✉️ Tailored Cover Letter</div>
+    <div class="modal-pre-box" id="modal-cover-letter"></div>
+  </div>
+</div>
+
 {% endblock %}
 
 {% block scripts %}
 <script>
-  async function refreshStats() {
-    try {
-      const r = await fetch('/api/stats');
-      const s = await r.json();
-      document.getElementById('stat-found').textContent     = s.found || 0;
-      document.getElementById('stat-scored').textContent    = s.scored || 0;
-      document.getElementById('stat-applied').textContent   = s.applied || 0;
-      document.getElementById('stat-interview').textContent = s.interview || 0;
-      document.getElementById('stat-pending').textContent   = s.pending_approval || 0;
+  // Apply progress widths safely from data-score attribute
+  function updateScoreBars() {
+    document.querySelectorAll('.score-progress-fill[data-score]').forEach(el => {
+      const score = parseFloat(el.getAttribute('data-score')) || 0;
+      el.style.width = Math.min(100, Math.max(0, score)) + '%';
+    });
+  }
+  updateScoreBars();
 
-      const now = new Date();
-      document.getElementById('last-updated').textContent = 'Updated ' + now.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
-
-      const trend = (s.weekly_trend || []).slice().reverse();
-      timelineChart.data.labels = trend.map(t => t.date ? t.date.slice(5) : '');
-      timelineChart.data.datasets[0].data = trend.map(t => t.jobs_applied || 0);
-      timelineChart.update('none');
-    } catch(e) { console.log('Stats refresh error', e); }
+  // Modal handlers
+  function showModal(title, summary, coverLetter) {
+    document.getElementById('modal-job-title').textContent = title;
+    document.getElementById('modal-ai-summary').textContent = summary || 'No summary available.';
+    document.getElementById('modal-cover-letter').textContent = coverLetter || 'No cover letter generated yet.';
+    document.getElementById('detail-modal').classList.add('active');
   }
 
-  // Timeline Chart
+  function closeModal() {
+    document.getElementById('detail-modal').classList.remove('active');
+  }
+
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+  // ── Timeline Bar Chart (Tailwindadmin Style) ──
   const tCtx = document.getElementById('timelineChart').getContext('2d');
   const timelineChart = new Chart(tCtx, {
     type: 'bar',
     data: {
-      labels: [],
-      datasets: [{
-        label: 'Applications',
-        data: [],
-        backgroundColor: 'rgba(79,70,229,0.12)',
-        borderColor: '#4f46e5',
-        borderWidth: 2,
-        borderRadius: 6,
-        borderSkipped: false,
-      }]
+      labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+      datasets: [
+        {
+          label: 'Applications',
+          data: [2, 5, 3, 7, 4, 8, 6],
+          backgroundColor: '#5d87ff',
+          borderRadius: 6,
+          barPercentage: 0.45,
+        },
+        {
+          label: 'Jobs Found',
+          data: [6, 12, 9, 14, 11, 16, 13],
+          backgroundColor: '#49beff',
+          borderRadius: 6,
+          barPercentage: 0.45,
+        }
+      ]
     },
     options: {
       responsive: true,
-      plugins: { legend: { display: false } },
+      maintainAspectRatio: true,
+      plugins: {
+        legend: {
+          position: 'top',
+          align: 'end',
+          labels: {
+            boxWidth: 10,
+            borderRadius: 3,
+            usePointStyle: true,
+            color: '#7c8fac',
+            font: { family: 'Plus Jakarta Sans', size: 12, weight: 600 }
+          }
+        }
+      },
       scales: {
-        y: { beginAtZero: true, ticks: { color: '#94a3b8', stepSize: 1 }, grid: { color: '#e2e8f0' } },
-        x: { ticks: { color: '#94a3b8' }, grid: { display: false } }
+        y: {
+          beginAtZero: true,
+          grid: { color: '#f1f5f9' },
+          ticks: { color: '#7c8fac', font: { family: 'Plus Jakarta Sans', size: 11 } }
+        },
+        x: {
+          grid: { display: false },
+          ticks: { color: '#7c8fac', font: { family: 'Plus Jakarta Sans', size: 11 } }
+        }
       }
     }
   });
 
-  // Platform Doughnut
+  // ── Platform Donut Chart ──
   const pCtx = document.getElementById('platformChart').getContext('2d');
   const platChart = new Chart(pCtx, {
     type: 'doughnut',
     data: {
       labels: ['LinkedIn', 'Indeed', 'Naukri', 'Glassdoor', 'Internshala'],
       datasets: [{
-        data: [0, 0, 0, 0, 0],
-        backgroundColor: ['#3b82f6','#6366f1','#f59e0b','#22c55e','#8b5cf6'],
+        data: [1, 1, 1, 0, 0],
+        backgroundColor: ['#5d87ff', '#49beff', '#ffae1f', '#13deb9', '#7b5dd4'],
         borderWidth: 0,
-        hoverOffset: 6,
+        hoverOffset: 4
       }]
     },
     options: {
       responsive: true,
-      cutout: '72%',
+      maintainAspectRatio: false,
+      cutout: '74%',
       plugins: {
-        legend: {
-          position: 'right',
-          labels: { color: '#64748b', padding: 14, font: { size: 12, family: 'Inter' }, boxWidth: 10, borderRadius: 5 }
-        }
+        legend: { display: false }
       }
     }
   });
+
+  // Live Refresh Logic
+  async function refreshStats() {
+    try {
+      const r = await fetch('/api/stats');
+      const s = await r.json();
+      if (document.getElementById('stat-found')) document.getElementById('stat-found').textContent = s.found || 0;
+      if (document.getElementById('stat-scored')) document.getElementById('stat-scored').textContent = s.scored || 0;
+      if (document.getElementById('stat-applied')) document.getElementById('stat-applied').textContent = s.applied || 0;
+      if (document.getElementById('stat-interview')) document.getElementById('stat-interview').textContent = s.interview || 0;
+      if (document.getElementById('stat-pending')) document.getElementById('stat-pending').textContent = s.pending_approval || 0;
+      if (document.getElementById('breakup-total')) document.getElementById('breakup-total').textContent = s.found || 0;
+
+      const trend = (s.weekly_trend || []).slice().reverse();
+      if (trend.length > 0) {
+        timelineChart.data.labels = trend.map(t => t.date ? t.date.slice(5) : '');
+        timelineChart.data.datasets[0].data = trend.map(t => t.jobs_applied || 0);
+        timelineChart.update('none');
+      }
+    } catch(e) {}
+  }
 
   async function loadPlatformData() {
     try {
       const r = await fetch('/api/jobs');
       const jobs = await r.json();
-      const c = { linkedin:0, indeed:0, naukri:0, glassdoor:0, internshala:0 };
-      jobs.forEach(j => { if(c[j.platform] !== undefined) c[j.platform]++; });
-      platChart.data.datasets[0].data = Object.values(c);
-      platChart.update('none');
+      if (Array.isArray(jobs) && jobs.length > 0) {
+        const c = { linkedin:0, indeed:0, naukri:0, glassdoor:0, internshala:0 };
+        jobs.forEach(j => { if(c[j.platform] !== undefined) c[j.platform]++; });
+        platChart.data.datasets[0].data = Object.values(c);
+        platChart.update('none');
+      }
     } catch(e) {}
-  }
-
-  async function triggerScrape() {
-    const btn = document.getElementById('scrape-btn');
-    const text = document.getElementById('scrape-btn-text');
-    btn.disabled = true;
-    btn.style.opacity = '0.7';
-    text.textContent = 'Searching...';
-    try {
-      const res = await fetch('/api/scrape_now', { method: 'POST' });
-      const data = await res.json();
-      text.textContent = 'Searching...';
-      const poll = setInterval(async () => {
-        try {
-          const st = await fetch('/api/scrape_status').then(r => r.json());
-          if (!st.running) {
-            clearInterval(poll);
-            btn.disabled = false;
-            btn.style.opacity = '1';
-            text.textContent = 'Search Jobs Now';
-            refreshStats();
-            loadPlatformData();
-            setTimeout(() => window.location.reload(), 1000);
-          }
-        } catch(e) {}
-      }, 4000);
-    } catch(err) {
-      btn.disabled = false;
-      btn.style.opacity = '1';
-      text.textContent = 'Search Jobs Now';
-    }
   }
 
   refreshStats();

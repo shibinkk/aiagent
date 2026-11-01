@@ -3,64 +3,211 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>{% block title %}AI Job Agent{% endblock %} — Shibin K K</title>
+  <title>{% block title %}Tailwindadmin Job Agent{% endblock %} — Shibin K K</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
 
-  <!-- ── Sidebar ─────────────────────────────── -->
-  <nav class="sidebar">
+  <!-- ── Left Sidebar Navigation (Tailwindadmin Style) ── -->
+  <aside class="sidebar">
+    <!-- Brand Header -->
     <div class="sidebar-brand">
-      <span class="brand-icon">🤖</span>
-      <div>
-        <span class="brand-text">Job Agent</span>
-        <span class="brand-sub">Shibin K K · SDET</span>
+      <div class="brand-logo-ring">
+        <div class="brand-logo-inner"></div>
+      </div>
+      <div class="brand-info">
+        <span class="brand-title">Tailwind<span>admin</span></span>
+        <span class="brand-tag">SDET Job Suite</span>
       </div>
     </div>
 
-    <p class="nav-section-label">Navigation</p>
-    <ul class="nav-links">
-      <li>
-        <a href="{{ url_for('index') }}" class="nav-link {% if request.endpoint == 'index' %}active{% endif %}">
-          <span class="nav-link-icon">📊</span> Dashboard
+    <!-- Navigation Menu Items -->
+    <ul class="sidebar-menu">
+      <li class="menu-category">HOME</li>
+      <li class="menu-item">
+        <a href="{{ url_for('index') }}" class="menu-link {% if request.endpoint == 'index' %}active{% endif %}">
+          <span class="menu-link-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="7" height="7"></rect>
+              <rect x="14" y="3" width="7" height="7"></rect>
+              <rect x="14" y="14" width="7" height="7"></rect>
+              <rect x="3" y="14" width="7" height="7"></rect>
+            </svg>
+          </span>
+          <span>Dashboard</span>
         </a>
       </li>
-      <li>
-        <a href="{{ url_for('jobs') }}" class="nav-link {% if request.endpoint == 'jobs' %}active{% endif %}">
-          <span class="nav-link-icon">💼</span> All Jobs
+
+      <li class="menu-category">PAGES</li>
+      <li class="menu-item">
+        <a href="{{ url_for('jobs') }}" class="menu-link {% if request.endpoint == 'jobs' %}active{% endif %}">
+          <span class="menu-link-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="16" y1="13" x2="8" y2="13"></line>
+              <line x1="16" y1="17" x2="8" y2="17"></line>
+              <polyline points="10 9 9 9 8 9"></polyline>
+            </svg>
+          </span>
+          <span>All Jobs</span>
         </a>
       </li>
-      <li>
-        <a href="{{ url_for('approvals') }}" class="nav-link {% if request.endpoint == 'approvals' %}active{% endif %}">
-          <span class="nav-link-icon">✋</span> Approvals
+      <li class="menu-item">
+        <a href="{{ url_for('approvals') }}" class="menu-link {% if request.endpoint == 'approvals' %}active{% endif %}">
+          <span class="menu-link-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M9 11l3 3L22 4"></path>
+              <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+            </svg>
+          </span>
+          <span>Approvals</span>
           {% if pending_count is defined and pending_count > 0 %}
-            <span class="badge">{{ pending_count }}</span>
+            <span class="menu-badge">{{ pending_count }}</span>
           {% endif %}
         </a>
       </li>
+
+      <li class="menu-category">APPS</li>
+      <li class="menu-item">
+        <a href="https://t.me/BotFather" target="_blank" class="menu-link">
+          <span class="menu-link-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="22" y1="2" x2="11" y2="13"></line>
+              <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+            </svg>
+          </span>
+          <span>Telegram Bot</span>
+        </a>
+      </li>
+      <li class="menu-item">
+        <a href="mailto:shibinkk17@gmail.com" class="menu-link">
+          <span class="menu-link-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+              <polyline points="22,6 12,13 2,6"></polyline>
+            </svg>
+          </span>
+          <span>Email Digest</span>
+        </a>
+      </li>
+
+      <li class="menu-category">AI ENGINE</li>
+      <li class="menu-item">
+        <div class="menu-link" style="cursor:default;">
+          <span class="menu-link-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+            </svg>
+          </span>
+          <span>AI Resume Matcher</span>
+        </div>
+      </li>
+      <li class="menu-item">
+        <div class="menu-link" style="cursor:default;">
+          <span class="menu-link-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 20h9"></path>
+              <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+            </svg>
+          </span>
+          <span>Cover Letter Gen</span>
+        </div>
+      </li>
     </ul>
 
-    <div class="sidebar-divider"></div>
-
+    <!-- Sidebar Profile Footer -->
     <div class="sidebar-footer">
-      <div class="agent-status">
-        <div class="status-dot"></div>
-        <div>
-          <div class="status-text">Agent Active</div>
-          <div class="status-sub">Searching every 6h</div>
+      <div class="user-profile-card">
+        <div class="user-avatar-wrap">
+          <img src="{{ url_for('static', filename='images/shibin_avatar.jpg') }}" alt="Shibin K K" class="user-avatar">
+          <div class="status-dot-online"></div>
+        </div>
+        <div class="user-meta">
+          <span class="user-name">Shibin K K</span>
+          <span class="user-role">SDET Automation</span>
         </div>
       </div>
     </div>
-  </nav>
+  </aside>
 
-  <!-- ── Main Content ──────────────────────── -->
-  <main class="main-content">
-    {% block content %}{% endblock %}
-  </main>
+  <!-- ── Main Layout Wrapper ── -->
+  <div class="main-wrapper">
+    <!-- Top Sticky Header -->
+    <header class="top-header">
+      <!-- Search Input -->
+      <div class="header-search">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="global-search" placeholder="Search jobs, skills, companies...">
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="header-actions">
+        <button id="scrape-btn" onclick="triggerScrape()" class="btn-search-trigger">
+          <span id="scrape-icon">⚡</span>
+          <span id="scrape-btn-text">Search Jobs Now</span>
+        </button>
+
+        <button class="header-icon-btn" title="Toggle Mode">
+          <span>🌙</span>
+        </button>
+
+        <button class="header-icon-btn" title="Notifications">
+          <span>🔔</span>
+          <div class="notif-badge"></div>
+        </button>
+
+        <div class="user-avatar-wrap" style="width: 36px; height: 36px; cursor: pointer;">
+          <img src="{{ url_for('static', filename='images/shibin_avatar.jpg') }}" alt="Shibin K K" class="user-avatar">
+          <div class="status-dot-online"></div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Page Body Container -->
+    <main class="page-container">
+      {% block content %}{% endblock %}
+    </main>
+  </div>
 
   {% block scripts %}{% endblock %}
+
+  <script>
+    // Universal trigger for Search Jobs
+    async function triggerScrape() {
+      const btn = document.getElementById('scrape-btn');
+      const text = document.getElementById('scrape-btn-text');
+      const icon = document.getElementById('scrape-icon');
+      if (!btn) return;
+      btn.disabled = true;
+      text.textContent = 'Searching...';
+      if (icon) icon.textContent = '⏳';
+      try {
+        const res = await fetch('/api/scrape_now', { method: 'POST' });
+        const poll = setInterval(async () => {
+          try {
+            const st = await fetch('/api/scrape_status').then(r => r.json());
+            if (!st.running) {
+              clearInterval(poll);
+              btn.disabled = false;
+              text.textContent = 'Search Jobs Now';
+              if (icon) icon.textContent = '⚡';
+              if (typeof refreshStats === 'function') refreshStats();
+              if (typeof loadPlatformData === 'function') loadPlatformData();
+              setTimeout(() => window.location.reload(), 1200);
+            }
+          } catch(e) {}
+        }, 4000);
+      } catch(err) {
+        btn.disabled = false;
+        text.textContent = 'Search Jobs Now';
+        if (icon) icon.textContent = '⚡';
+      }
+    }
+  </script>
 </body>
 </html>
