@@ -320,3 +320,59 @@ def get_stats_summary() -> dict:
         logger.warning(f"Error getting stats summary: {e}")
 
     return stats
+
+
+def get_monthly_activity() -> dict:
+    """
+    Returns monthly application activity for the past 7 months.
+    Returns:
+    {
+        "labels": ["May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov"],
+        "found": [0, 0, 0, 0, 0, 0, 15],
+        "applied": [0, 0, 0, 0, 0, 0, 3]
+    }
+    """
+    labels = []
+    month_keys = []
+
+    now = datetime.now()
+    for i in range(6, -1, -1):
+        y = now.year
+        m = now.month - i
+        while m <= 0:
+            m += 12
+            y -= 1
+        m_str = f"{y:04d}-{m:02d}"
+        month_keys.append(m_str)
+        month_name = datetime(y, m, 1).strftime("%b")
+        labels.append(month_name)
+
+    found_counts = []
+    applied_counts = []
+
+    try:
+        conn = get_connection()
+        for key in month_keys:
+            row_f = conn.execute(
+                "SELECT COUNT(*) as cnt FROM jobs WHERE date_found LIKE ?",
+                (f"{key}%",)
+            ).fetchone()
+            found_counts.append(row_f["cnt"] if row_f else 0)
+
+            row_a = conn.execute(
+                "SELECT COUNT(*) as cnt FROM jobs WHERE (status = 'applied' AND (date_applied LIKE ? OR (date_applied IS NULL AND date_found LIKE ?)))",
+                (f"{key}%", f"{key}%")
+            ).fetchone()
+            applied_counts.append(row_a["cnt"] if row_a else 0)
+        conn.close()
+    except Exception as e:
+        logger.warning(f"Error computing monthly activity: {e}")
+        found_counts = [0] * len(labels)
+        applied_counts = [0] * len(labels)
+
+    return {
+        "labels": labels,
+        "found": found_counts,
+        "applied": applied_counts
+    }
+

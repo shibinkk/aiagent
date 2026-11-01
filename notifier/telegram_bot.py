@@ -6,7 +6,10 @@ Sends job alerts and daily summaries via Telegram Bot API.
 import os
 import asyncio
 import requests
+from dotenv import load_dotenv
 from loguru import logger
+
+load_dotenv()
 
 
 def _get_bot_config() -> tuple[str, str]:
