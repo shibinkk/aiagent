@@ -34,6 +34,7 @@ secure-smtplib==0.1.1
 # Web Dashboard
 flask==3.0.2
 flask-sqlalchemy==3.1.1
+gunicorn==21.2.0
 
 # Utilities
 pandas==2.2.1

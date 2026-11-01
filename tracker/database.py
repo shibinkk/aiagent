@@ -3,22 +3,39 @@ tracker/database.py
 SQLite database layer — stores all job listings and application history.
 """
 
+import os
 import sqlite3
 import hashlib
 from datetime import datetime
 from pathlib import Path
 from loguru import logger
 
+_db_env = os.getenv("DATABASE_PATH")
+if _db_env:
+    DB_PATH = Path(_db_env)
+else:
+    DB_PATH = Path(__file__).resolve().parent.parent / "data" / "jobs.db"
 
-DB_PATH = Path(__file__).resolve().parent.parent / "data" / "jobs.db"
 _db_initialized = False
 
 
 def init_db():
     """Create tables if they don't exist."""
-    global _db_initialized
-    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(str(DB_PATH), check_same_thread=False)
+    global _db_initialized, DB_PATH
+    try:
+        DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+    except Exception as e:
+        logger.warning(f"Could not create DB dir at {DB_PATH.parent}: {e}. Falling back to /tmp")
+        DB_PATH = Path("/tmp/jobs.db")
+        DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+
+    try:
+        conn = sqlite3.connect(str(DB_PATH), check_same_thread=False)
+    except Exception as e:
+        logger.warning(f"Failed to connect to {DB_PATH}: {e}. Falling back to /tmp/jobs.db")
+        DB_PATH = Path("/tmp/jobs.db")
+        conn = sqlite3.connect(str(DB_PATH), check_same_thread=False)
+
     conn.row_factory = sqlite3.Row
     cur = conn.cursor()
 
@@ -68,13 +85,19 @@ def init_db():
 
 
 def get_connection() -> sqlite3.Connection:
-    global _db_initialized
-    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+    global _db_initialized, DB_PATH
     if not _db_initialized:
         init_db()
-    conn = sqlite3.connect(str(DB_PATH), check_same_thread=False)
-    conn.row_factory = sqlite3.Row
-    return conn
+    try:
+        conn = sqlite3.connect(str(DB_PATH), check_same_thread=False)
+        conn.row_factory = sqlite3.Row
+        return conn
+    except Exception as e:
+        logger.warning(f"Connection error to {DB_PATH}: {e}. Retrying init_db()")
+        init_db()
+        conn = sqlite3.connect(str(DB_PATH), check_same_thread=False)
+        conn.row_factory = sqlite3.Row
+        return conn
 
 
 def make_hash(title: str, company: str, platform: str) -> str:
@@ -147,31 +170,45 @@ def update_job_status(job_id: int, status: str):
 
 
 def get_jobs(status: str = None, limit: int = 200) -> list[dict]:
-    conn = get_connection()
-    if status:
-        rows = conn.execute(
-            "SELECT * FROM jobs WHERE status=? ORDER BY date_found DESC LIMIT ?",
-            (status, limit),
-        ).fetchall()
-    else:
-        rows = conn.execute(
-            "SELECT * FROM jobs ORDER BY date_found DESC LIMIT ?", (limit,)
-        ).fetchall()
-    conn.close()
-    return [dict(r) for r in rows]
+    try:
+        conn = get_connection()
+        if status:
+            rows = conn.execute(
+                "SELECT * FROM jobs WHERE status=? ORDER BY date_found DESC LIMIT ?",
+                (status, limit),
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                "SELECT * FROM jobs ORDER BY date_found DESC LIMIT ?", (limit,)
+            ).fetchall()
+        conn.close()
+        return [dict(r) for r in rows]
+    except sqlite3.OperationalError:
+        init_db()
+        return []
+    except Exception as e:
+        logger.warning(f"Error fetching jobs: {e}")
+        return []
 
 
 def get_pending_approvals() -> list[dict]:
-    conn = get_connection()
-    rows = conn.execute("""
-        SELECT j.*, aq.id as queue_id
-        FROM approval_queue aq
-        JOIN jobs j ON j.id = aq.job_id
-        WHERE aq.status = 'pending'
-        ORDER BY aq.requested_at DESC
-    """).fetchall()
-    conn.close()
-    return [dict(r) for r in rows]
+    try:
+        conn = get_connection()
+        rows = conn.execute("""
+            SELECT j.*, aq.id as queue_id
+            FROM approval_queue aq
+            JOIN jobs j ON j.id = aq.job_id
+            WHERE aq.status = 'pending'
+            ORDER BY aq.requested_at DESC
+        """).fetchall()
+        conn.close()
+        return [dict(r) for r in rows]
+    except sqlite3.OperationalError:
+        init_db()
+        return []
+    except Exception as e:
+        logger.warning(f"Error fetching pending approvals: {e}")
+        return []
 
 
 def add_to_approval_queue(job_id: int):
@@ -203,56 +240,83 @@ def reject_job(queue_id: int):
 
 
 def get_daily_stats() -> dict:
-    conn = get_connection()
     today = datetime.now().strftime("%Y-%m-%d")
-    row = conn.execute(
-        "SELECT * FROM daily_stats WHERE date=?", (today,)
-    ).fetchone()
-    if not row:
-        conn.execute(
-            "INSERT INTO daily_stats (date) VALUES (?)", (today,)
-        )
-        conn.commit()
+    try:
+        conn = get_connection()
         row = conn.execute(
             "SELECT * FROM daily_stats WHERE date=?", (today,)
         ).fetchone()
-    conn.close()
-    return dict(row)
+        if not row:
+            conn.execute(
+                "INSERT INTO daily_stats (date) VALUES (?)", (today,)
+            )
+            conn.commit()
+            row = conn.execute(
+                "SELECT * FROM daily_stats WHERE date=?", (today,)
+            ).fetchone()
+        conn.close()
+        return dict(row) if row else {"date": today}
+    except sqlite3.OperationalError:
+        init_db()
+        return {"date": today}
+    except Exception as e:
+        logger.warning(f"Error fetching daily stats: {e}")
+        return {"date": today}
 
 
 def increment_stat(field: str, amount: int = 1):
-    conn = get_connection()
-    today = datetime.now().strftime("%Y-%m-%d")
-    conn.execute(
-        f"UPDATE daily_stats SET {field} = {field} + ? WHERE date=?",
-        (amount, today),
-    )
-    conn.commit()
-    conn.close()
+    try:
+        conn = get_connection()
+        today = datetime.now().strftime("%Y-%m-%d")
+        conn.execute(
+            f"UPDATE daily_stats SET {field} = {field} + ? WHERE date=?",
+            (amount, today),
+        )
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        logger.warning(f"Error incrementing stat {field}: {e}")
 
 
 def get_stats_summary() -> dict:
     """Returns overall stats for the dashboard."""
-    conn = get_connection()
-    stats = {}
-    for status in ("found", "scored", "applied", "interview", "rejected", "pending_approval"):
-        row = conn.execute(
-            "SELECT COUNT(*) as cnt FROM jobs WHERE status=?", (status,)
-        ).fetchone()
-        stats[status] = row["cnt"] if row else 0
-
-    # Include queue pending count
+    stats = {
+        "found": 0, "scored": 0, "applied": 0,
+        "interview": 0, "rejected": 0, "pending_approval": 0,
+        "weekly_trend": []
+    }
     try:
-        q_row = conn.execute("SELECT COUNT(*) as cnt FROM approval_queue WHERE status='pending'").fetchone()
-        stats["pending_approval"] = max(stats.get("pending_approval", 0), (q_row["cnt"] if q_row else 0))
-    except Exception:
-        pass
+        conn = get_connection()
+        for status in ("found", "scored", "applied", "interview", "rejected", "pending_approval"):
+            try:
+                row = conn.execute(
+                    "SELECT COUNT(*) as cnt FROM jobs WHERE status=?", (status,)
+                ).fetchone()
+                stats[status] = row["cnt"] if row else 0
+            except sqlite3.OperationalError:
+                init_db()
+                stats[status] = 0
 
-    # Weekly trend
-    rows = conn.execute("""
-        SELECT date, jobs_applied FROM daily_stats
-        ORDER BY date DESC LIMIT 14
-    """).fetchall()
-    stats["weekly_trend"] = [dict(r) for r in rows]
-    conn.close()
+        # Include queue pending count
+        try:
+            q_row = conn.execute("SELECT COUNT(*) as cnt FROM approval_queue WHERE status='pending'").fetchone()
+            stats["pending_approval"] = max(stats.get("pending_approval", 0), (q_row["cnt"] if q_row else 0))
+        except Exception:
+            pass
+
+        # Weekly trend
+        try:
+            rows = conn.execute("""
+                SELECT date, jobs_applied FROM daily_stats
+                ORDER BY date DESC LIMIT 14
+            """).fetchall()
+            stats["weekly_trend"] = [dict(r) for r in rows]
+        except Exception:
+            pass
+        conn.close()
+    except sqlite3.OperationalError:
+        init_db()
+    except Exception as e:
+        logger.warning(f"Error getting stats summary: {e}")
+
     return stats

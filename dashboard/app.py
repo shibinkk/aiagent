@@ -65,9 +65,15 @@ def _run_bg_scrape():
 
 @app.route("/")
 def index():
-    stats = get_stats_summary()
-    recent_jobs = get_jobs(limit=10)
-    pending = get_pending_approvals()
+    try:
+        stats = get_stats_summary()
+        recent_jobs = get_jobs(limit=10)
+        pending = get_pending_approvals()
+    except Exception as e:
+        init_db()
+        stats = get_stats_summary()
+        recent_jobs = []
+        pending = []
     return render_template(
         "index.html",
         stats=stats,
