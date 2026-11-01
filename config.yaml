@@ -1,0 +1,90 @@
+job_search:
+  roles:
+    - "Software Tester"
+    - "QA Engineer"
+    - "QA Automation Engineer"
+    - "SDET"
+    - "Software Development Engineer in Test"
+    - "Test Automation Engineer"
+    - "Manual Tester"
+    - "QA Analyst"
+    - "Automation Tester"
+    - "Selenium Tester"
+    - "Playwright Automation"
+    - "API Tester"
+
+  experience_level: "entry"        # 0-2 years experience
+
+  locations:
+    - "Kozhikode"
+    - "Calicut"
+    - "Kochi"
+    - "Cochin"
+    - "Trivandrum"
+    - "Thiruvananthapuram"
+    - "Chennai"
+    - "Bangalore"
+    - "Bengaluru"
+    - "Kerala"
+    - "Remote"
+
+  keywords_must_have: []           # Leave empty — role match is enough
+
+  keywords_exclude:
+    - "10+ years"
+    - "15+ years"
+    - "Senior Lead"
+    - "Director"
+    - "VP"
+    - "Head of QA"
+    - "8 years"
+    - "7 years"
+
+  relevance_threshold: 60          # Score >= 60 qualifies for apply
+  results_per_platform: 50
+
+platforms:
+  linkedin: true
+  indeed: true
+  naukri: true
+  glassdoor: true
+  internshala: true
+
+scheduler:
+  scrape_interval_hours: 6
+  daily_summary_time: "08:00"
+  timezone: "Asia/Kolkata"
+
+apply:
+  auto_apply: false                # SAFE MODE — review in dashboard first
+  require_approval: true           # Jobs go to approval queue
+  max_applications_per_day: 15
+  platforms_to_apply:
+    - linkedin
+    - indeed
+
+ai:
+  model: "llama3"
+  ollama_url: "http://localhost:11434"
+  cover_letter_max_words: 300
+  score_threshold: 60
+
+notifications:
+  telegram: true
+  email: true
+  notify_on_new_match: true
+  notify_on_applied: true
+  daily_summary: true
+
+resume:
+  path: "resume/resume.pdf"
+
+# ─── Your Personal Info (used in cover letters & notifications) ─────────────
+candidate:
+  name: "Shibin K K"
+  phone: "9072765136"
+  email: "shibinkk17@gmail.com"
+  linkedin: "linkedin.com/in/shibinkk"
+  current_role: "SDET | QA Automation Engineer"
+  current_company: "Gritstone Technologies"
+  location: "Kozhikode, Kerala"

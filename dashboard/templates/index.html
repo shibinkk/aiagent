@@ -1,0 +1,231 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+
+<!-- Page Header -->
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Good day, Shibin! 👋</h1>
+    <p class="page-subtitle">Here's your job search overview for today</p>
+  </div>
+  <div class="header-pill">
+    <div class="header-pill-dot"></div>
+    <span id="last-updated">Live</span>
+  </div>
+</div>
+
+<!-- Stat Cards -->
+<div class="stats-grid">
+  <div class="stat-card blue">
+    <div class="stat-card-top">
+      <div class="stat-icon-wrap">🔍</div>
+      <span class="stat-trend">Today</span>
+    </div>
+    <div class="stat-value" id="stat-found">{{ stats.get('found', 0) }}</div>
+    <div class="stat-label">Jobs Discovered</div>
+  </div>
+  <div class="stat-card purple">
+    <div class="stat-card-top">
+      <div class="stat-icon-wrap">🧠</div>
+    </div>
+    <div class="stat-value" id="stat-scored">{{ stats.get('scored', 0) }}</div>
+    <div class="stat-label">AI Scored</div>
+  </div>
+  <div class="stat-card green">
+    <div class="stat-card-top">
+      <div class="stat-icon-wrap">📨</div>
+    </div>
+    <div class="stat-value" id="stat-applied">{{ stats.get('applied', 0) }}</div>
+    <div class="stat-label">Applied</div>
+  </div>
+  <div class="stat-card amber">
+    <div class="stat-card-top">
+      <div class="stat-icon-wrap">💼</div>
+    </div>
+    <div class="stat-value" id="stat-interview">{{ stats.get('interview', 0) }}</div>
+    <div class="stat-label">Interviews</div>
+  </div>
+  <div class="stat-card indigo">
+    <div class="stat-card-top">
+      <div class="stat-icon-wrap">⏳</div>
+    </div>
+    <div class="stat-value" id="stat-pending">{{ stats.get('pending_approval', 0) }}</div>
+    <div class="stat-label">Needs Review</div>
+  </div>
+</div>
+
+<!-- Charts -->
+<div class="charts-row">
+  <div class="card chart-card">
+    <div class="card-header">
+      <h3 class="card-title">📈 Applications Timeline</h3>
+    </div>
+    <canvas id="timelineChart" height="90"></canvas>
+  </div>
+  <div class="card chart-card">
+    <div class="card-header">
+      <h3 class="card-title">🌐 Platform Breakdown</h3>
+    </div>
+    <canvas id="platformChart" height="90"></canvas>
+  </div>
+</div>
+
+<!-- Target Locations -->
+<div class="card" style="padding:20px 24px;">
+  <div class="card-header" style="margin-bottom:12px;">
+    <h3 class="card-title">📍 Your Target Locations</h3>
+  </div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;">
+    {% for city in ['Kozhikode', 'Kochi', 'Trivandrum', 'Chennai', 'Bangalore', 'Remote / Outside India'] %}
+    <span style="background:var(--primary-lt);color:var(--primary);border:1px solid var(--primary-mid);border-radius:999px;padding:5px 14px;font-size:12.5px;font-weight:600;">
+      📌 {{ city }}
+    </span>
+    {% endfor %}
+  </div>
+</div>
+
+<!-- Recent Jobs -->
+<div class="card">
+  <div class="card-header">
+    <h3 class="card-title">🏆 Recent Matches</h3>
+    <a href="{{ url_for('jobs') }}" class="btn-link">View All →</a>
+  </div>
+  <table class="jobs-table">
+    <thead>
+      <tr>
+        <th>Job Title</th>
+        <th>Company</th>
+        <th>Platform</th>
+        <th>AI Score</th>
+        <th>Status</th>
+        <th>Found</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for job in recent_jobs %}
+      <tr>
+        <td>
+          {% if job.job_url %}
+            <a href="{{ job.job_url }}" target="_blank" class="job-link">{{ job.title }}</a>
+          {% else %}
+            <span style="font-weight:600;color:var(--text2);">{{ job.title }}</span>
+          {% endif %}
+        </td>
+        <td class="text-muted">{{ job.company }}</td>
+        <td><span class="platform-badge {{ job.platform }}">{{ job.platform.title() }}</span></td>
+        <td>
+          {% if job.ai_score %}
+          <div class="score-bar-wrap">
+            <div class="score-bar" style="width:{{ job.ai_score }}%"></div>
+            <span class="score-text">{{ "%.0f"|format(job.ai_score) }}</span>
+          </div>
+          {% else %}
+          <span class="text-muted">—</span>
+          {% endif %}
+        </td>
+        <td><span class="status-badge {{ job.status }}">{{ job.status.replace('_',' ').title() }}</span></td>
+        <td class="text-muted text-sm">{{ job.date_found[:10] if job.date_found else '—' }}</td>
+      </tr>
+      {% else %}
+      <tr>
+        <td colspan="6" class="empty-state">
+          No jobs yet — start the agent with <code>py main.py</code> to begin searching!
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+  async function refreshStats() {
+    try {
+      const r = await fetch('/api/stats');
+      const s = await r.json();
+      document.getElementById('stat-found').textContent     = s.found || 0;
+      document.getElementById('stat-scored').textContent    = s.scored || 0;
+      document.getElementById('stat-applied').textContent   = s.applied || 0;
+      document.getElementById('stat-interview').textContent = s.interview || 0;
+      document.getElementById('stat-pending').textContent   = s.pending_approval || 0;
+
+      const now = new Date();
+      document.getElementById('last-updated').textContent = 'Updated ' + now.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+
+      const trend = (s.weekly_trend || []).slice().reverse();
+      timelineChart.data.labels = trend.map(t => t.date ? t.date.slice(5) : '');
+      timelineChart.data.datasets[0].data = trend.map(t => t.jobs_applied || 0);
+      timelineChart.update('none');
+    } catch(e) { console.log('Stats refresh error', e); }
+  }
+
+  // Timeline Chart
+  const tCtx = document.getElementById('timelineChart').getContext('2d');
+  const timelineChart = new Chart(tCtx, {
+    type: 'bar',
+    data: {
+      labels: [],
+      datasets: [{
+        label: 'Applications',
+        data: [],
+        backgroundColor: 'rgba(79,70,229,0.12)',
+        borderColor: '#4f46e5',
+        borderWidth: 2,
+        borderRadius: 6,
+        borderSkipped: false,
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false } },
+      scales: {
+        y: { beginAtZero: true, ticks: { color: '#94a3b8', stepSize: 1 }, grid: { color: '#e2e8f0' } },
+        x: { ticks: { color: '#94a3b8' }, grid: { display: false } }
+      }
+    }
+  });
+
+  // Platform Doughnut
+  const pCtx = document.getElementById('platformChart').getContext('2d');
+  const platChart = new Chart(pCtx, {
+    type: 'doughnut',
+    data: {
+      labels: ['LinkedIn', 'Indeed', 'Naukri', 'Glassdoor', 'Internshala'],
+      datasets: [{
+        data: [0, 0, 0, 0, 0],
+        backgroundColor: ['#3b82f6','#6366f1','#f59e0b','#22c55e','#8b5cf6'],
+        borderWidth: 0,
+        hoverOffset: 6,
+      }]
+    },
+    options: {
+      responsive: true,
+      cutout: '72%',
+      plugins: {
+        legend: {
+          position: 'right',
+          labels: { color: '#64748b', padding: 14, font: { size: 12, family: 'Inter' }, boxWidth: 10, borderRadius: 5 }
+        }
+      }
+    }
+  });
+
+  async function loadPlatformData() {
+    try {
+      const r = await fetch('/api/jobs');
+      const jobs = await r.json();
+      const c = { linkedin:0, indeed:0, naukri:0, glassdoor:0, internshala:0 };
+      jobs.forEach(j => { if(c[j.platform] !== undefined) c[j.platform]++; });
+      platChart.data.datasets[0].data = Object.values(c);
+      platChart.update('none');
+    } catch(e) {}
+  }
+
+  refreshStats();
+  loadPlatformData();
+  setInterval(refreshStats, 60000);
+</script>
+{% endblock %}

@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Approval Queue — AI Job Agent{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Approval Queue</h1>
+    <p class="page-subtitle">Review and approve jobs before applying</p>
+  </div>
+</div>
+
+{% if jobs %}
+<div class="approvals-grid">
+  {% for job in jobs %}
+  <div class="approval-card">
+    <div class="approval-header">
+      <div>
+        <h3 class="approval-title">{{ job.title }}</h3>
+        <p class="approval-company">🏢 {{ job.company }} &nbsp;•&nbsp; 📍 {{ job.location or '—' }}</p>
+      </div>
+      <div class="score-circle {% if job.ai_score >= 80 %}high{% elif job.ai_score >= 65 %}mid{% else %}low{% endif %}">
+        {{ "%.0f"|format(job.ai_score or 0) }}
+      </div>
+    </div>
+    <div class="approval-meta">
+      <span class="platform-badge {{ job.platform }}">{{ job.platform.title() }}</span>
+      <span class="text-muted text-sm">Found {{ job.date_found[:10] if job.date_found else '—' }}</span>
+    </div>
+    {% if job.ai_summary %}
+    <p class="approval-summary">{{ job.ai_summary[:250] }}</p>
+    {% endif %}
+    {% if job.cover_letter %}
+    <details class="cover-letter-details">
+      <summary>View Cover Letter</summary>
+      <pre class="cover-letter-text">{{ job.cover_letter[:800] }}</pre>
+    </details>
+    {% endif %}
+    <div class="approval-actions">
+      {% if job.job_url %}
+      <a href="{{ job.job_url }}" target="_blank" class="btn btn-outline">🔗 View Job</a>
+      {% endif %}
+      <a href="{{ url_for('reject', queue_id=job.queue_id) }}" class="btn btn-danger">❌ Skip</a>
+      <a href="{{ url_for('approve', queue_id=job.queue_id) }}" class="btn btn-success">✅ Approve</a>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="card empty-state-card">
+  <div class="empty-icon">✋</div>
+  <h2>No pending approvals</h2>
+  <p>When the agent finds high-score jobs, they'll appear here for your review before applying.</p>
+</div>
+{% endif %}
+{% endblock %}

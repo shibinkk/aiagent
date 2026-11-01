@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+{% block title %}All Jobs — AI Job Agent{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">All Jobs</h1>
+    <p class="page-subtitle">Browse and filter every discovered job</p>
+  </div>
+</div>
+
+<!-- Filters -->
+<div class="filters-bar card">
+  <a href="{{ url_for('jobs') }}" class="filter-btn {% if not status_filter %}active{% endif %}">All</a>
+  <a href="{{ url_for('jobs', status='found') }}" class="filter-btn {% if status_filter == 'found' %}active{% endif %}">Found</a>
+  <a href="{{ url_for('jobs', status='scored') }}" class="filter-btn {% if status_filter == 'scored' %}active{% endif %}">Scored</a>
+  <a href="{{ url_for('jobs', status='pending_approval') }}" class="filter-btn {% if status_filter == 'pending_approval' %}active{% endif %}">Pending</a>
+  <a href="{{ url_for('jobs', status='applied') }}" class="filter-btn {% if status_filter == 'applied' %}active{% endif %}">Applied</a>
+  <a href="{{ url_for('jobs', status='interview') }}" class="filter-btn {% if status_filter == 'interview' %}active{% endif %}">Interview</a>
+  <a href="{{ url_for('jobs', status='rejected') }}" class="filter-btn {% if status_filter == 'rejected' %}active{% endif %}">Rejected</a>
+  <input type="text" id="search-input" class="search-input" placeholder="🔍 Search title / company...">
+</div>
+
+<!-- Jobs Table -->
+<div class="card">
+  <table class="jobs-table" id="jobs-table">
+    <thead>
+      <tr>
+        <th>Title</th>
+        <th>Company</th>
+        <th>Location</th>
+        <th>Platform</th>
+        <th>AI Score</th>
+        <th>Status</th>
+        <th>Date</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for job in jobs %}
+      <tr class="job-row" data-title="{{ job.title|lower }}" data-company="{{ job.company|lower }}">
+        <td>
+          {% if job.job_url %}
+            <a href="{{ job.job_url }}" target="_blank" class="job-link">{{ job.title }}</a>
+          {% else %}
+            <span>{{ job.title }}</span>
+          {% endif %}
+        </td>
+        <td class="text-muted">{{ job.company }}</td>
+        <td class="text-muted text-sm">{{ job.location or '—' }}</td>
+        <td><span class="platform-badge {{ job.platform }}">{{ job.platform.title() }}</span></td>
+        <td>
+          {% if job.ai_score %}
+          <div class="score-bar-wrap">
+            <div class="score-bar" style="width:{{ job.ai_score }}%"></div>
+            <span class="score-text">{{ "%.0f"|format(job.ai_score) }}</span>
+          </div>
+          {% else %}
+          <span class="text-muted">—</span>
+          {% endif %}
+        </td>
+        <td><span class="status-badge {{ job.status }}">{{ job.status.replace('_',' ').title() }}</span></td>
+        <td class="text-muted text-sm">{{ job.date_found[:10] if job.date_found else '—' }}</td>
+        <td>
+          {% if job.ai_summary %}
+          <button class="btn-icon" onclick="showDetails({{ job.id }}, `{{ job.title|e }}`, `{{ job.ai_summary|e }}`, `{{ (job.cover_letter or '')|truncate(500)|e }}`)" title="View AI Details">💡</button>
+          {% endif %}
+          {% if job.job_url %}
+          <a href="{{ job.job_url }}" target="_blank" class="btn-icon" title="Open Job">🔗</a>
+          {% endif %}
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="8" class="empty-state">No jobs to show.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Detail Modal -->
+<div class="modal-overlay" id="modal-overlay" onclick="closeModal()">
+  <div class="modal" onclick="event.stopPropagation()">
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <h2 id="modal-title" class="modal-job-title"></h2>
+    <div class="modal-section">
+      <h4>🧠 AI Analysis</h4>
+      <p id="modal-summary"></p>
+    </div>
+    <div class="modal-section">
+      <h4>✉️ Cover Letter</h4>
+      <pre id="modal-cover"></pre>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // Live search filter
+  document.getElementById('search-input').addEventListener('input', function() {
+    const q = this.value.toLowerCase();
+    document.querySelectorAll('.job-row').forEach(row => {
+      const match = row.dataset.title.includes(q) || row.dataset.company.includes(q);
+      row.style.display = match ? '' : 'none';
+    });
+  });
+
+  function showDetails(id, title, summary, cover) {
+    document.getElementById('modal-title').textContent = title;
+    document.getElementById('modal-summary').textContent = summary;
+    document.getElementById('modal-cover').textContent = cover || 'No cover letter generated yet.';
+    document.getElementById('modal-overlay').classList.add('active');
+  }
+
+  function closeModal() {
+    document.getElementById('modal-overlay').classList.remove('active');
+  }
+
+  document.addEventListener('keydown', e => { if(e.key === 'Escape') closeModal(); });
+</script>
+{% endblock %}

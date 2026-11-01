@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>{% block title %}AI Job Agent{% endblock %} — Shibin K K</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+  <!-- ── Sidebar ─────────────────────────────── -->
+  <nav class="sidebar">
+    <div class="sidebar-brand">
+      <span class="brand-icon">🤖</span>
+      <div>
+        <span class="brand-text">Job Agent</span>
+        <span class="brand-sub">Shibin K K · SDET</span>
+      </div>
+    </div>
+
+    <p class="nav-section-label">Navigation</p>
+    <ul class="nav-links">
+      <li>
+        <a href="{{ url_for('index') }}" class="nav-link {% if request.endpoint == 'index' %}active{% endif %}">
+          <span class="nav-link-icon">📊</span> Dashboard
+        </a>
+      </li>
+      <li>
+        <a href="{{ url_for('jobs') }}" class="nav-link {% if request.endpoint == 'jobs' %}active{% endif %}">
+          <span class="nav-link-icon">💼</span> All Jobs
+        </a>
+      </li>
+      <li>
+        <a href="{{ url_for('approvals') }}" class="nav-link {% if request.endpoint == 'approvals' %}active{% endif %}">
+          <span class="nav-link-icon">✋</span> Approvals
+          {% if pending_count is defined and pending_count > 0 %}
+            <span class="badge">{{ pending_count }}</span>
+          {% endif %}
+        </a>
+      </li>
+    </ul>
+
+    <div class="sidebar-divider"></div>
+
+    <div class="sidebar-footer">
+      <div class="agent-status">
+        <div class="status-dot"></div>
+        <div>
+          <div class="status-text">Agent Active</div>
+          <div class="status-sub">Searching every 6h</div>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ── Main Content ──────────────────────── -->
+  <main class="main-content">
+    {% block content %}{% endblock %}
+  </main>
+
+  {% block scripts %}{% endblock %}
+</body>
+</html>

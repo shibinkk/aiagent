@@ -1,0 +1,20 @@
+# render.yaml — Render.com deployment configuration
+services:
+  - type: web
+    name: shibin-job-agent
+    runtime: python
+    buildCommand: pip install -r render_requirements.txt
+    startCommand: gunicorn dashboard.app:app --bind 0.0.0.0:$PORT --workers 1
+    envVars:
+      - key: FLASK_SECRET_KEY
+        generateValue: true
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: TELEGRAM_CHAT_ID
+        sync: false
+      - key: EMAIL_SENDER
+        value: shibinkk17@gmail.com
+      - key: EMAIL_PASSWORD
+        sync: false
+      - key: EMAIL_RECIPIENT
+        value: shibinkk17@gmail.com
