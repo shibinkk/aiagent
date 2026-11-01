@@ -161,8 +161,7 @@
         <th>Platform</th>
         <th>AI Match Score</th>
         <th>Status</th>
-        <th>Website Link</th>
-        <th>AI Analysis</th>
+        <th>Website & Action</th>
       </tr>
     </thead>
     <tbody>
@@ -179,7 +178,7 @@
                    loading="lazy">
               <span class="company-initial-fallback" style="display:none;">{{ (job.company or 'J')[:1]|upper }}</span>
             </div>
-            <div>
+            <div style="max-width:240px;">
               {% if job.job_url %}
                 <a href="{{ job.job_url }}" target="_blank" class="job-title-link" title="Open Job Posting">{{ job.title }}</a>
               {% else %}
@@ -189,7 +188,7 @@
             </div>
           </div>
         </td>
-        <td style="color:var(--text-body);font-size:13px;white-space:nowrap;">
+        <td style="color:var(--text-body);font-size:12.5px;max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="{{ job.location }}">
           📍 {{ job.location or 'India / Remote' }}
         </td>
         <td>
@@ -218,27 +217,25 @@
           <span class="status-pill {{ job.status }}">{{ job.status.replace('_',' ').title() }}</span>
         </td>
         <td>
-          {% if job.job_url %}
-            <a href="{{ job.job_url }}" target="_blank" class="btn-visit-website" title="Open official job posting on {{ job.platform.title() }}">
-              <span>Visit Job ↗</span>
-            </a>
-          {% else %}
-            <span class="btn-visit-website disabled">Direct</span>
-          {% endif %}
-        </td>
-        <td>
-          {% if job.ai_summary %}
-            <button class="btn-ai-analysis" onclick="showModal(`{{ job.title|e }}`, `{{ job.ai_summary|e }}`, `{{ (job.cover_letter or '')|e }}`)" title="View AI Match Analysis & Tailored Cover Letter">
-              <span>💡 Fit Details</span>
-            </button>
-          {% else %}
-            <span style="color:var(--text-muted);font-size:12px;">—</span>
-          {% endif %}
+          <div style="display:inline-flex;align-items:center;gap:6px;">
+            {% if job.job_url %}
+              <a href="{{ job.job_url }}" target="_blank" class="btn-visit-website" title="Open job posting on {{ job.platform.title() }}">
+                Apply ↗
+              </a>
+            {% else %}
+              <span class="btn-visit-website disabled">Direct</span>
+            {% endif %}
+            {% if job.ai_summary %}
+              <button class="btn-ai-analysis" onclick="showModal(`{{ job.title|e }}`, `{{ job.ai_summary|e }}`, `{{ (job.cover_letter or '')|e }}`)" title="Review AI Match & Tailored Cover Letter">
+                💡 Fit
+              </button>
+            {% endif %}
+          </div>
         </td>
       </tr>
       {% else %}
       <tr>
-        <td colspan="8" style="text-align:center;padding:48px 20px;color:var(--text-muted);">
+        <td colspan="7" style="text-align:center;padding:48px 20px;color:var(--text-muted);">
           No jobs found yet. Click <strong>Search Jobs Now</strong> in the top header to discover fresh jobs!
         </td>
       </tr>
