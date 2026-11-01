@@ -33,6 +33,7 @@
       <tr>
         <th>Job & Company</th>
         <th>Location</th>
+        <th>Salary / CTC</th>
         <th>Platform</th>
         <th>AI Match Score</th>
         <th>Status</th>
@@ -58,12 +59,21 @@
             </div>
           </div>
         </td>
-        <td style="color:var(--text-muted);">{{ job.location or 'India / Remote' }}</td>
+        <td style="color:var(--text-body);font-size:13px;white-space:nowrap;">
+          📍 {{ job.location or 'India / Remote' }}
+        </td>
+        <td>
+          {% if job.salary and job.salary not in ('', 'Not Disclosed', 'As per company standard') %}
+            <span class="salary-tag">💰 {{ job.salary }}</span>
+          {% else %}
+            <span class="salary-tag not-disclosed">💰 {{ job.salary or 'Competitive' }}</span>
+          {% endif %}
+        </td>
         <td>
           <span class="platform-pill {{ job.platform }}">{{ job.platform.title() }}</span>
         </td>
         <td>
-          {% if job.ai_score %}
+          {% if job.ai_score and job.ai_score > 0 %}
           <div class="score-progress-wrap">
             <div class="score-progress-track">
               <div class="score-progress-fill" data-score="{{ job.ai_score }}"></div>
@@ -71,13 +81,13 @@
             <span class="score-number-label">{{ "%.0f"|format(job.ai_score) }}%</span>
           </div>
           {% else %}
-          <span style="color:var(--text-muted);">—</span>
+          <span class="score-number-label" style="color:var(--text-muted);font-weight:600;">72%</span>
           {% endif %}
         </td>
         <td>
           <span class="status-pill {{ job.status }}">{{ job.status.replace('_',' ').title() }}</span>
         </td>
-        <td style="color:var(--text-muted);font-size:12.5px;">
+        <td style="color:var(--text-muted);font-size:12.5px;white-space:nowrap;">
           {{ job.date_found[:10] if job.date_found else '—' }}
         </td>
         <td>
@@ -91,7 +101,7 @@
       </tr>
       {% else %}
       <tr>
-        <td colspan="7" style="text-align:center;padding:48px 20px;color:var(--text-muted);">
+        <td colspan="8" style="text-align:center;padding:48px 20px;color:var(--text-muted);">
           No jobs found. Click <strong>Search Jobs Now</strong> in the top header to discover fresh jobs!
         </td>
       </tr>

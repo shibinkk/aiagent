@@ -1,88 +1,112 @@
 """
 scraper/naukri_scraper.py
-Scrapes Naukri.com for job listings using requests + BeautifulSoup.
-Note: Naukri uses JavaScript-rendered content; Selenium fallback is used.
+Scrapes Naukri.com for QA / SDET job listings using python-jobspy.
 """
 
 import time
-import requests
-from bs4 import BeautifulSoup
 from loguru import logger
 
+try:
+    from jobspy import scrape_jobs
+    JOBSPY_AVAILABLE = True
+except ImportError:
+    JOBSPY_AVAILABLE = False
 
-HEADERS = {
-    "User-Agent": (
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-        "AppleWebKit/537.36 (KHTML, like Gecko) "
-        "Chrome/121.0.0.0 Safari/537.36"
-    ),
-    "Accept-Language": "en-US,en;q=0.9",
-}
+
+def _safe_format_salary(min_amt, max_amt, cur="₹") -> str:
+    def _to_clean_int(val):
+        if val is None:
+            return None
+        try:
+            import math
+            f = float(val)
+            if math.isnan(f) or math.isinf(f):
+                return None
+            return int(f)
+        except (ValueError, TypeError):
+            return None
+
+    clean_min = _to_clean_int(min_amt)
+    clean_max = _to_clean_int(max_amt)
+    cur = cur or "₹"
+
+    if clean_min and clean_max:
+        return f"{cur} {clean_min:,} - {clean_max:,}"
+    elif clean_min:
+        return f"{cur} {clean_min:,}+"
+    elif clean_max:
+        return f"Up to {cur} {clean_max:,}"
+    return "Not Disclosed"
 
 
 def scrape_naukri(config: dict) -> list[dict]:
-    """Scrape job listings from Naukri.com."""
+
+    """Scrape job listings from Naukri.com using JobSpy."""
     if not config.get("platforms", {}).get("naukri", True):
         return []
 
-    roles = config["job_search"]["roles"]
-    results_wanted = config["job_search"].get("results_per_platform", 30)
+    if not JOBSPY_AVAILABLE:
+        logger.warning("JobSpy not available for Naukri scraper.")
+        return []
+
+    roles = config.get("job_search", {}).get("roles", ["SDET", "QA Automation Engineer"])
+    locations_raw = config.get("job_search", {}).get("locations", ["Kochi", "Bangalore", "Chennai", "India"])
+    results_wanted = config.get("job_search", {}).get("results_per_platform", 15)
+
+    clean_locations = [l for l in locations_raw if l.lower() not in ("remote", "hybrid")]
+    if not clean_locations:
+        clean_locations = ["India"]
+
     all_jobs = []
+    seen = set()
 
-    for role in roles[:3]:  # Limit roles to avoid rate limits
-        jobs = _search_naukri(role, results_wanted)
-        all_jobs.extend(jobs)
-        time.sleep(3)
-
-    logger.info("Naukri found {} jobs", len(all_jobs))
-    return all_jobs
-
-
-def _search_naukri(query: str, limit: int = 30) -> list[dict]:
-    safe_query = query.replace(" ", "-").lower()
-    url = f"https://www.naukri.com/{safe_query}-jobs"
-    jobs = []
-
-    try:
-        resp = requests.get(url, headers=HEADERS, timeout=15)
-        if resp.status_code != 200:
-            logger.warning("Naukri returned status {} for '{}'", resp.status_code, query)
-            return []
-
-        soup = BeautifulSoup(resp.text, "lxml")
-
-        # Naukri article cards
-        cards = soup.select("article.jobTuple") or soup.select("div.jobTupleHeader")
-        if not cards:
-            # Try newer layout
-            cards = soup.select("div.srp-jobtuple-wrapper")
-
-        for card in cards[:limit]:
+    # Search top 2 roles across top 2 locations
+    for role in roles[:2]:
+        for loc in clean_locations[:2]:
+            logger.info("Naukri (JobSpy) → Searching '{}' in '{}'", role, loc)
             try:
-                title_el = card.select_one("a.title") or card.select_one("a.jobTitle")
-                company_el = card.select_one("a.subTitle") or card.select_one("a.companyName")
-                location_el = card.select_one("li.location span") or card.select_one("span.locWdth")
+                df = scrape_jobs(
+                    site_name=["naukri"],
+                    search_term=role,
+                    location=loc,
+                    results_wanted=min(results_wanted, 15),
+                )
+                if df is None or df.empty:
+                    continue
 
-                title = title_el.get_text(strip=True) if title_el else ""
-                company = company_el.get_text(strip=True) if company_el else ""
-                location = location_el.get_text(strip=True) if location_el else "India"
-                job_url = title_el.get("href", "") if title_el else ""
+                for _, row in df.iterrows():
+                    title = str(row.get("title", "")).strip()
+                    company = str(row.get("company", "")).strip()
+                    job_loc = str(row.get("location", "")).strip() or loc
+                    url = str(row.get("job_url", "")).strip()
 
-                if title and company:
-                    jobs.append({
+                    key = f"{title.lower()}::{company.lower()}"
+                    if key in seen or not title or not company:
+                        continue
+                    seen.add(key)
+
+                    # Extract salary safely
+                    salary_str = _safe_format_salary(
+                        row.get("min_amount"),
+                        row.get("max_amount"),
+                        row.get("currency") or "₹"
+                    )
+
+                    all_jobs.append({
                         "title": title,
                         "company": company,
-                        "location": location,
+                        "location": job_loc,
                         "platform": "naukri",
-                        "job_url": job_url,
-                        "description": "",
-                        "salary": "",
-                        "date_posted": "",
+                        "job_url": url,
+                        "description": str(row.get("description", ""))[:3000],
+                        "salary": salary_str,
+                        "date_posted": str(row.get("date_posted", "")),
                     })
-            except Exception:
+
+                time.sleep(1.5)
+            except Exception as e:
+                logger.error("Naukri scrape error for '{}' in '{}': {}", role, loc, e)
                 continue
 
-    except requests.RequestException as e:
-        logger.error("Naukri scrape error for '{}': {}", query, e)
-
-    return jobs
+    logger.info("Naukri found {} jobs total", len(all_jobs))
+    return all_jobs

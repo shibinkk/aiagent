@@ -74,15 +74,15 @@ def run_job_cycle(config: dict, ai_client: OllamaClient, resume_text: str):
 
     # ── 4. AI Scoring & Cover Letter Generation ──────────────────────────────
     if not ai_client.is_available():
-        logger.warning("Ollama not available — skipping AI scoring.")
-        logger.warning("  ▶ Start Ollama: run 'ollama serve' and 'ollama pull llama3'")
-    else:
-        logger.info("AI scoring {} new jobs...", len(new_jobs))
-        for i, job in enumerate(new_jobs, 1):
-            logger.info("  [{}/{}] Scoring: {} @ {}", i, len(new_jobs), job.get("title"), job.get("company"))
-            result = score_job(ai_client, resume_text, job)
-            score = result["score"]
-            summary = result.get("summary", "")
+        logger.info("Ollama offline — using built-in intelligent QA/SDET heuristic scoring engine.")
+    
+    logger.info("AI scoring {} new jobs...", len(new_jobs))
+    for i, job in enumerate(new_jobs, 1):
+        logger.info("  [{}/{}] Scoring: {} @ {}", i, len(new_jobs), job.get("title"), job.get("company"))
+        result = score_job(ai_client, resume_text, job)
+        score = result["score"]
+        summary = result.get("summary", "")
+
 
             cover_letter = ""
             if score >= threshold:

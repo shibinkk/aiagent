@@ -82,6 +82,70 @@ def init_db():
     conn.close()
     _db_initialized = True
     logger.info("Database initialised at {}", DB_PATH)
+    clean_and_backfill_jobs()
+
+
+def clean_and_backfill_jobs():
+    """
+    1. Fix location columns containing salary text (e.g. ₹, salary, Competitive).
+    2. Purge non-QA/non-testing jobs that were accidentally inserted.
+    3. Backfill any jobs missing AI match score or summary.
+    """
+    try:
+        conn = sqlite3.connect(str(DB_PATH), check_same_thread=False)
+        conn.row_factory = sqlite3.Row
+        cur = conn.cursor()
+
+        # 1. Purge non-QA jobs
+        disqualifiers = ['civil engineer', 'business development', 'sales & business', 'odia speakers', 'sales executive']
+        for bad in disqualifiers:
+            cur.execute("DELETE FROM jobs WHERE LOWER(title) LIKE ?", (f"%{bad}%",))
+
+        # 2. Fix location with salary data
+        rows = cur.execute("SELECT id, title, company, location, salary, description FROM jobs").fetchall()
+        for r in rows:
+            loc = r["location"] or ""
+            sal = r["salary"] or ""
+
+            needs_update = False
+            new_loc = loc
+            new_sal = sal
+
+            if any(sym in loc for sym in ["₹", "salary", "Competitive", "/year", "lpa", "lac"]):
+                if not new_sal or new_sal == "Competitive salary" or len(new_sal) < len(loc):
+                    new_sal = loc
+                new_loc = "India / Remote"
+                needs_update = True
+
+            if not new_sal:
+                new_sal = "As per company standard"
+                needs_update = True
+
+            if needs_update:
+                cur.execute("UPDATE jobs SET location=?, salary=? WHERE id=?", (new_loc, new_sal, r["id"]))
+
+        # 3. Backfill missing AI scores
+        rows_to_score = cur.execute("SELECT * FROM jobs WHERE ai_score IS NULL OR ai_score <= 0").fetchall()
+        if rows_to_score:
+            from ai_engine.scorer import score_job
+            from ai_engine.cover_letter import generate_cover_letter
+
+            for r in rows_to_score:
+                job_dict = dict(r)
+                res = score_job(None, "", job_dict)
+                score = res.get("score", 75)
+                summary = res.get("summary", "")
+                cv = generate_cover_letter(None, "", job_dict)
+                cur.execute(
+                    "UPDATE jobs SET ai_score=?, ai_summary=?, cover_letter=? WHERE id=?",
+                    (score, summary, cv, r["id"])
+                )
+
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        logger.warning(f"Error in clean_and_backfill_jobs: {e}")
+
 
 
 def get_connection() -> sqlite3.Connection:
@@ -120,13 +184,17 @@ def insert_job(job: dict) -> int | None:
     if job_exists(job_hash):
         return None
 
+    score = job.get("ai_score") or 0
+    status = "scored" if score > 0 else "found"
+
     conn = get_connection()
     cur = conn.cursor()
     cur.execute("""
         INSERT INTO jobs
             (job_hash, title, company, location, platform, job_url,
-             description, salary, date_posted, date_found, status)
-        VALUES (?,?,?,?,?,?,?,?,?,?,?)
+             description, salary, date_posted, date_found, status,
+             ai_score, ai_summary, cover_letter)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
     """, (
         job_hash,
         job.get("title", ""),
@@ -138,12 +206,16 @@ def insert_job(job: dict) -> int | None:
         job.get("salary", ""),
         job.get("date_posted", ""),
         datetime.now().isoformat(timespec="seconds"),
-        "found",
+        status,
+        score,
+        job.get("ai_summary", ""),
+        job.get("cover_letter", ""),
     ))
     conn.commit()
     new_id = cur.lastrowid
     conn.close()
     return new_id
+
 
 
 def update_job_ai(job_id: int, score: float, summary: str, cover_letter: str):

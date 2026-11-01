@@ -963,6 +963,29 @@ body {
   color: #7b5dd4;
 }
 
+/* Salary Badge */
+.salary-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: #f0fdf4;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+  font-size: 11.5px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.salary-tag.not-disclosed {
+  background: var(--bg-surface-alt);
+  color: var(--text-muted);
+  border: 1px solid var(--border-color);
+  font-weight: 500;
+}
+
+
 /* AI Score Progress Pill (CSS purely with data-score) */
 .score-progress-wrap {
   display: flex;

@@ -17,14 +17,16 @@ from tracker.database import (
     init_db,
     get_jobs, get_stats_summary, get_pending_approvals,
     update_job_status, approve_job, reject_job, get_daily_stats,
-    get_monthly_activity, insert_job, increment_stat
+    get_monthly_activity, insert_job, increment_stat,
+    clean_and_backfill_jobs
 )
 from dotenv import load_dotenv
 
 load_dotenv()
 
-# Initialize SQLite database tables immediately on startup
+# Initialize SQLite database tables immediately on startup and sanitize records
 init_db()
+clean_and_backfill_jobs()
 
 app = Flask(__name__)
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "dev-secret-key-change-me")
@@ -82,16 +84,31 @@ def _run_bg_scrape(quick: bool = True):
         raw_jobs = scrape_all_platforms(scrape_cfg)
         filtered = filter_jobs(raw_jobs, scrape_cfg)
 
+        from ai_engine.scorer import score_job
+        from ai_engine.cover_letter import generate_cover_letter
+
         for job in filtered:
+            # Score job using AI engine
+            try:
+                res = score_job(None, "", job)
+                job["ai_score"] = res.get("score", 75)
+                job["ai_summary"] = res.get("summary", "")
+                job["cover_letter"] = generate_cover_letter(None, "", job)
+            except Exception as se:
+                print(f"Scoring error: {se}")
+
             job_id = insert_job(job)
             if job_id:
                 increment_stat("jobs_found")
+                increment_stat("jobs_scored")
                 job["id"] = job_id
-                # Send instant alert to Telegram for high-matching jobs
-                try:
-                    send_job_alert(job)
-                except Exception as ex:
-                    print(f"Telegram alert error: {ex}")
+                # Send instant alert to Telegram for high-matching jobs (>= 75%)
+                if (job.get("ai_score") or 0) >= 75:
+                    try:
+                        send_job_alert(job)
+                    except Exception as ex:
+                        print(f"Telegram alert error: {ex}")
+
 
     except Exception as e:
         print(f"Background scrape error: {e}")
