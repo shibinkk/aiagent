@@ -138,7 +138,6 @@
 
       <!-- Search Jobs Action -->
       <button class="cta" id="scrape-btn" onclick="triggerScrape()">
-        <span id="scrape-icon">⚡</span>
         <span id="scrape-btn-text">Search jobs now</span>
       </button>
     </div>
@@ -224,11 +223,9 @@
   async function triggerScrape() {
     const btn = document.getElementById('scrape-btn');
     const text = document.getElementById('scrape-btn-text');
-    const icon = document.getElementById('scrape-icon');
     if (!btn) return;
     btn.disabled = true;
-    text.textContent = 'Searching portals…';
-    if (icon) icon.textContent = '⏳';
+    if (text) text.textContent = 'Searching portals…';
     toast('Searching LinkedIn, Indeed & Naukri for SDET roles…');
 
     try {
@@ -239,8 +236,7 @@
           if (!st.running) {
             clearInterval(poll);
             btn.disabled = false;
-            text.textContent = 'Search jobs now';
-            if (icon) icon.textContent = '⚡';
+            if (text) text.textContent = 'Search jobs now';
             toast('Job search finished! Fresh matches added.');
             if (typeof refreshStats === 'function') refreshStats();
             if (typeof loadPlatformData === 'function') loadPlatformData();
@@ -250,8 +246,7 @@
       }, 3500);
     } catch (err) {
       btn.disabled = false;
-      text.textContent = 'Search jobs now';
-      if (icon) icon.textContent = '⚡';
+      if (text) text.textContent = 'Search jobs now';
       toast('Failed to trigger background scrape');
     }
   }
