@@ -1,0 +1,15 @@
+search-path = [
+    ".",
+    "dashboard",
+    "tracker",
+    "scraper",
+    "filter",
+    "ai_engine",
+    "notifier",
+    "resume",
+    "applicator"
+]
+
+site-package-path = [
+    "C:/Users/shibi/AppData/Local/Programs/Python/Python313/Lib/site-packages"
+]
