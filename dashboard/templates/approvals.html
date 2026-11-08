@@ -2,62 +2,98 @@
 {% block title %}Approvals — SDET Job Suite{% endblock %}
 
 {% block content %}
-<div class="card-top-bar" style="margin-bottom:24px;">
-  <div class="card-title-group">
-    <h2>Review & Approvals Queue</h2>
-    <p>Handpick and approve applications before the automated bot submits them</p>
-  </div>
+<div class="pg">
+  <h1>Approvals</h1>
+  <p>Strong matches wait here. Approving opens the job link and marks it applied.</p>
 </div>
 
 {% if jobs %}
-<div style="display:grid;grid-template-columns:repeat(auto-fill, minmax(360px, 1fr));gap:20px;">
-  {% for job in jobs %}
-  <div class="modern-card" style="display:flex;flex-direction:column;justify-content:space-between;">
-    <div>
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">
-        <div>
-          <h3 style="font-size:16px;font-weight:700;color:var(--text-dark);line-height:1.3;">{{ job.title }}</h3>
-          <p style="font-size:12.5px;color:var(--text-muted);margin-top:4px;">🏢 {{ job.company }} &nbsp;•&nbsp; 📍 {{ job.location or 'India' }}</p>
+  <div style="display:grid;gap:14px;margin-bottom:28px;">
+    {% for job in jobs %}
+    {% set sc = (job.ai_score or 75)|float|round|int %}
+    <div class="card">
+      <div style="flex:1;min-width:280px;">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+          <b style="font-size:16px;color:var(--ink);">{{ job.title }}</b>
+          <span style="color:var(--muted);">·</span>
+          <span style="font-weight:500;color:var(--muted);">{{ job.company }}</span>
+          <span class="platform-pill {{ (job.platform or 'other')|lower }}" style="margin-left:4px;">{{ job.platform.title() if job.platform else 'Portal' }}</span>
+          <span class="pill {% if sc >= 88 %}hi{% elif sc >= 60 %}mid{% endif %}">{{ sc }}%</span>
         </div>
-        <div style="background:var(--primary-light);color:var(--primary);font-weight:800;font-size:14px;padding:6px 12px;border-radius:var(--radius-pill);border:1px solid rgba(93,135,255,0.25);">
-          {{ "%.0f"|format(job.ai_score or 0) }}%
-        </div>
+        <p style="margin:6px 0 0;color:var(--muted);font-size:13.5px;line-height:1.5;">
+          {{ job.ai_summary or 'Matched based on your SDET core qualifications and experience.' }}
+        </p>
       </div>
 
-      <div style="display:flex;gap:8px;margin-bottom:14px;">
-        <span class="platform-pill {{ job.platform }}">{{ job.platform.title() }}</span>
-        <span style="font-size:11.5px;color:var(--text-muted);align-self:center;">Found {{ job.date_found[:10] if job.date_found else '—' }}</span>
+      <div class="acts">
+        <script type="application/json" id="job-data-{{ job.queue_id }}">
+          {{ {'title': job.title or '', 'summary': job.ai_summary or '', 'cover': job.cover_letter or ''}|tojson }}
+        </script>
+        {% if job.cover_letter or job.ai_summary %}
+          <button class="ghost" type="button" onclick="openJobFitById({{ job.queue_id }})">
+            Cover letter
+          </button>
+        {% endif %}
+        <a href="{{ url_for('reject', queue_id=job.queue_id) }}" class="ghost" style="color:var(--accent);text-decoration:none;">
+          Reject
+        </a>
+        <a href="{{ url_for('approve', queue_id=job.queue_id) }}" 
+           class="cta" 
+           {% if job.job_url %}onclick="window.open('{{ job.job_url }}', '_blank', 'noopener');"{% endif %} 
+           style="text-decoration:none;">
+          Approve &amp; apply
+        </a>
       </div>
-
-      {% if job.ai_summary %}
-      <div style="background:var(--bg-surface-alt);border:1px solid var(--border-color);border-radius:var(--radius-sm);padding:12px;font-size:12.5px;color:var(--text-body);line-height:1.5;margin-bottom:14px;">
-        {{ job.ai_summary[:240] }}...
-      </div>
-      {% endif %}
-
-      {% if job.cover_letter %}
-      <details style="margin-bottom:16px;cursor:pointer;">
-        <summary style="font-size:12.5px;font-weight:600;color:var(--primary);">✉️ Preview Cover Letter</summary>
-        <pre class="modal-pre-box" style="margin-top:8px;max-height:160px;overflow-y:auto;font-size:11.5px;">{{ job.cover_letter }}</pre>
-      </details>
-      {% endif %}
     </div>
-
-    <div style="display:flex;gap:10px;margin-top:14px;border-top:1px solid var(--border-subtle);padding-top:14px;">
-      {% if job.job_url %}
-      <a href="{{ job.job_url }}" target="_blank" class="city-pill" style="text-decoration:none;font-weight:700;">🔗 View</a>
-      {% endif %}
-      <a href="{{ url_for('reject', queue_id=job.queue_id) }}" class="city-pill" style="text-decoration:none;background:var(--coral-light);color:var(--coral);border-color:#fcd6cc;margin-left:auto;">❌ Skip</a>
-      <a href="{{ url_for('approve', queue_id=job.queue_id) }}" class="city-pill" style="text-decoration:none;background:var(--teal);color:#ffffff;border-color:var(--teal);">✅ Approve & Apply</a>
+    {% endfor %}
+  </div>
+{% else %}
+  <div class="panel empty" style="justify-content:center;flex-direction:column;text-align:center;padding:56px 20px;gap:12px;">
+    <p style="font-size:16px;color:var(--ink);font-weight:600;">Nothing to approve</p>
+    <p style="margin:0;color:var(--muted);max-width:440px;">Jobs scoring 88% or higher appear here for your one-click approval before applying.</p>
+    <div style="margin-top:12px;">
+      <a href="{{ url_for('jobs') }}" class="ghost" style="text-decoration:none;">Go to all jobs</a>
     </div>
   </div>
-  {% endfor %}
-</div>
-{% else %}
-<div class="modern-card" style="text-align:center;padding:64px 24px;">
-  <div style="font-size:48px;margin-bottom:16px;">✋</div>
-  <h2 style="font-size:20px;font-weight:700;color:var(--text-dark);margin-bottom:8px;">No pending approvals</h2>
-  <p style="font-size:14px;color:var(--text-muted);max-width:440px;margin:0 auto;">When the AI agent discovers high-match SDET jobs, they will appear here for your one-click approval before applying.</p>
-</div>
 {% endif %}
+
+<!-- ── Cover Letter / Fit Modal ── -->
+<div class="modal-overlay" id="detail-modal" onclick="closeModal()">
+  <div class="modal-box" onclick="event.stopPropagation()">
+    <button class="modal-close-btn" type="button" onclick="closeModal()">✕</button>
+    <h2 id="modal-job-title" style="font:700 20px var(--display);color:var(--ink);margin-bottom:12px;"></h2>
+    <div style="font-weight:600;font-size:13px;color:var(--teal);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:4px;">🧠 AI match analysis</div>
+    <p id="modal-ai-summary" style="font-size:14px;color:var(--muted);line-height:1.6;margin-bottom:16px;"></p>
+    
+    <div style="font-weight:600;font-size:13px;color:var(--teal);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:4px;">✉️ Tailored cover letter</div>
+    <div id="modal-cover-letter" class="out" style="max-height:220px;overflow-y:auto;"></div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  function openJobFitById(id) {
+    const el = document.getElementById('job-data-' + id);
+    if (!el) return;
+    try {
+      const data = JSON.parse(el.textContent);
+      showJobFitModal(data.title, data.summary, data.cover);
+    } catch (e) {
+      console.error('Failed to open modal:', e);
+    }
+  }
+
+  function showJobFitModal(title, summary, coverLetter) {
+    document.getElementById('modal-job-title').textContent = title;
+    document.getElementById('modal-ai-summary').textContent = summary || 'No summary available.';
+    document.getElementById('modal-cover-letter').textContent = coverLetter || 'No cover letter generated yet.';
+    document.getElementById('detail-modal').classList.add('active');
+  }
+
+  function closeModal() {
+    document.getElementById('detail-modal').classList.remove('active');
+  }
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+</script>
 {% endblock %}

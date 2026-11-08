@@ -2,166 +2,161 @@
 {% block title %}Dashboard — SDET Job Suite{% endblock %}
 
 {% block content %}
-
-<!-- ── Welcome Banner Card (Exact Match to Screenshot) ── -->
-<div class="welcome-banner">
-  <div class="welcome-left">
-    <div class="welcome-avatar-wrap">
-      <img src="{{ url_for('static', filename='images/shibin_avatar.jpg') }}" alt="Shibin K K" class="welcome-avatar">
+<!-- ── Hello Welcome Header ── -->
+<section class="hello">
+  <div>
+    <h1>Welcome back, Shibin 👋</h1>
+    <p>Add the roles you find, let AI score them against your resume, and approve the best before you apply.</p>
+  </div>
+  <button class="agent" id="agent-toggle-btn" type="button" onclick="toggleAutoAgent()" style="cursor:pointer;text-align:left;">
+    <span class="pulse" id="agent-pulse"></span>
+    <div>
+      <b id="agent-status-text">Auto-score on</b>
+      <small id="agent-desc-text">New jobs are scored when added</small>
     </div>
-    <div class="welcome-text">
-      <h1>Welcome back! Shibin 👋</h1>
-      <p>SDET & QA Automation Suite — Automated job scraping, AI scoring & smart applications</p>
-      <div class="welcome-pills">
-        <span class="welcome-pill">🎯 SDET / QA Automation</span>
-        <span class="welcome-pill">📍 Kerala, Chennai, Bangalore & Global</span>
-        <span class="welcome-pill" style="color:var(--teal);border-color:rgba(19,222,185,0.3);">● Auto-Agent Active</span>
+  </button>
+</section>
+
+<!-- ── Pipeline Metric Bar ── -->
+{% set found_count = stats.get('found', 0) %}
+{% set denom = found_count if found_count > 0 else 1 %}
+{% set scored_pct = [((stats.get('scored', 0) / denom) * 100)|float|round|int, 100]|min %}
+{% set applied_pct = [((stats.get('applied', 0) / denom) * 100)|float|round|int, 100]|min %}
+{% set interview_pct = [((stats.get('interview', 0) / denom) * 100)|float|round|int, 100]|min %}
+
+<section class="pipe">
+  <div class="st" style="--c:var(--accent)">
+    <small>Discovered</small>
+    <strong id="stat-found">{{ found_count }}</strong>
+    <div class="bar"><i id="bar-found" style="width:100%"></i></div>
+  </div>
+  <div class="st" style="--c:var(--sky)">
+    <small>AI scored</small>
+    <strong id="stat-scored">{{ stats.get('scored', 0) }}</strong>
+    <div class="bar"><i id="bar-scored" style="width:{{ scored_pct }}%"></i></div>
+  </div>
+  <div class="st" style="--c:var(--amber)">
+    <small>Applied</small>
+    <strong id="stat-applied">{{ stats.get('applied', 0) }}</strong>
+    <div class="bar"><i id="bar-applied" style="width:{{ applied_pct }}%"></i></div>
+  </div>
+  <div class="st" style="--c:var(--teal)">
+    <small>Interviews</small>
+    <strong id="stat-interview">{{ stats.get('interview', 0) }}</strong>
+    <div class="bar"><i id="bar-interview" style="width:{{ interview_pct }}%"></i></div>
+  </div>
+  <div class="mq">
+    <small>Match quality target</small>
+    <strong>88%+</strong>
+    <span>Jobs at or above this score go to your review queue.</span>
+  </div>
+</section>
+
+<!-- ── Main Columns Grid ── -->
+<section class="cols">
+  <!-- Application Activity Panel -->
+  <div class="panel">
+    <div class="ph">
+      <div>
+        <h2>Application activity</h2>
+        <p class="sub">Jobs found compared with applications sent</p>
+      </div>
+      <div class="seg">
+        <button id="range-w" class="active" type="button" onclick="setChartRange('w')">Weekly</button>
+        <button id="range-m" type="button" onclick="setChartRange('m')">Monthly</button>
       </div>
     </div>
+    <div class="legend">
+      <span><i style="background:var(--sky)"></i>Jobs found</span>
+      <span><i style="background:var(--teal)"></i>Applications</span>
+    </div>
+    <div style="position:relative;width:100%;height:220px;">
+      <canvas id="activityChart"></canvas>
+    </div>
   </div>
-  <div class="welcome-right">
-    <img src="{{ url_for('static', filename='images/developer_banner.jpg') }}" alt="QA Automation" class="banner-graphic">
+
+  <!-- Right Panel: Platform Breakdown & Review Queue -->
+  <div class="panel" style="display:flex;flex-direction:column;justify-content:space-between;">
+    <div>
+      <div class="ph">
+        <div>
+          <h2>Platform breakdown</h2>
+          <p class="sub">Where your jobs come from</p>
+        </div>
+      </div>
+      <ul class="plat" id="plat-list">
+        <li>
+          <div>LinkedIn <span id="plat-cnt-linkedin">0 jobs</span></div>
+          <div class="bar" style="--c:var(--sky)"><i id="plat-bar-linkedin" style="width:0%"></i></div>
+        </li>
+        <li>
+          <div>Indeed <span id="plat-cnt-indeed">0 jobs</span></div>
+          <div class="bar" style="--c:var(--teal)"><i id="plat-bar-indeed" style="width:0%"></i></div>
+        </li>
+        <li>
+          <div>Naukri <span id="plat-cnt-naukri">0 jobs</span></div>
+          <div class="bar" style="--c:var(--amber)"><i id="plat-bar-naukri" style="width:0%"></i></div>
+        </li>
+      </ul>
+    </div>
+
+    <!-- Review Queue Box -->
+    <div class="queue">
+      <h3>Review queue</h3>
+      <p id="queue-desc">
+        {% if pending_count and pending_count > 0 %}
+          {{ pending_count }} role{{ 's' if pending_count > 1 else '' }} waiting for your review.
+        {% else %}
+          Nothing waiting for approval.
+        {% endif %}
+      </p>
+      <a href="{{ url_for('approvals') }}" class="ghost" style="text-decoration:none;">Open approvals</a>
+    </div>
+  </div>
+</section>
+
+<!-- ── Target Locations Panel ── -->
+<div class="panel" style="margin-bottom:24px;">
+  <div class="ph">
+    <div>
+      <h2>Target search locations</h2>
+      <p class="sub">Cities actively scanned across LinkedIn, Indeed &amp; Naukri</p>
+    </div>
+  </div>
+  <div id="locations-container" style="margin-bottom:14px;">
+    {% for city in locations %}
+      <span class="chip" style="margin:0 8px 8px 0;">
+        📍 {{ city }}
+        <button type="button" onclick="removeLocation('{{ city }}')" title="Remove {{ city }}">✕</button>
+      </span>
+    {% endfor %}
+  </div>
+  <div style="display:flex;gap:10px;max-width:440px;">
+    <input type="text" id="new-loc-input" placeholder="Add location (e.g. Pune, Hyderabad, Remote)" onkeydown="if(event.key==='Enter') addLocation()">
+    <button type="button" onclick="addLocation()" class="ghost" style="white-space:nowrap;">+ Add</button>
   </div>
 </div>
 
-<!-- ── Row of 6 Pastel Metric Cards (Exact Match to Screenshot) ── -->
-<div class="stats-cards-grid">
-  <!-- 1. Soft Coral/Pink Card -->
-  <div class="stat-card-pastel pink">
-    <div class="stat-icon-badge">🔖</div>
-    <div class="stat-label-text">Discovered</div>
-    <div class="stat-number" id="stat-found">{{ stats.get('found', 0) }}</div>
-  </div>
-
-  <!-- 2. Soft Cyan Card -->
-  <div class="stat-card-pastel cyan">
-    <div class="stat-icon-badge">📬</div>
-    <div class="stat-label-text">AI Scored</div>
-    <div class="stat-number" id="stat-scored">{{ stats.get('scored', 0) }}</div>
-  </div>
-
-  <!-- 3. Soft Amber Card -->
-  <div class="stat-card-pastel amber">
-    <div class="stat-icon-badge">💼</div>
-    <div class="stat-label-text">Applied</div>
-    <div class="stat-number" id="stat-applied">{{ stats.get('applied', 0) }}</div>
-  </div>
-
-  <!-- 4. Soft Indigo Card -->
-  <div class="stat-card-pastel indigo">
-    <div class="stat-icon-badge">👤</div>
-    <div class="stat-label-text">Interviews</div>
-    <div class="stat-number" id="stat-interview">{{ stats.get('interview', 0) }}</div>
-  </div>
-
-  <!-- 5. Soft Rose Card -->
-  <div class="stat-card-pastel rose">
-    <div class="stat-icon-badge">⭐</div>
-    <div class="stat-label-text">Review Queue</div>
-    <div class="stat-number" id="stat-pending">{{ stats.get('pending_approval', 0) }}</div>
-  </div>
-
-  <!-- 6. Soft Purple Card -->
-  <div class="stat-card-pastel purple">
-    <div class="stat-icon-badge">⚡</div>
-    <div class="stat-label-text">Match Quality</div>
-    <div class="stat-number">88%+</div>
-  </div>
-</div>
-
-<!-- ── Main Content Grid (Activity + Breakdown) ── -->
-<div class="dashboard-main-grid">
-  <!-- Left: Activity Chart (Revenue updates style) -->
-  <div class="modern-card">
-    <div class="card-top-bar">
-      <div class="card-title-group">
-        <h2>Application Activity</h2>
-        <p>Overview of jobs found vs applications submitted</p>
-      </div>
-      <div class="dropdown-pill">
-        <span>Monthly View</span>
-        <span>▾</span>
-      </div>
+<!-- ── Recent Discovered Jobs Table Panel ── -->
+<div class="panel tw">
+  <div class="ph">
+    <div>
+      <h2>Recent job matches</h2>
+      <p class="sub">Browse, inspect AI scores, and approve recent discoveries</p>
     </div>
-    <canvas id="timelineChart" height="130"></canvas>
+    <a href="{{ url_for('jobs') }}" class="ghost" style="text-decoration:none;">View all jobs →</a>
   </div>
 
-  <!-- Right: Column with 2 stacked cards -->
-  <div class="right-column-stack">
-    <!-- Card A: Platform Breakdown (Yearly breakup style) -->
-    <div class="modern-card">
-      <div class="card-top-bar" style="margin-bottom:12px;">
-        <div class="card-title-group">
-          <h2>Platform Breakdown</h2>
-          <p>Distribution across job portals</p>
-        </div>
-      </div>
-      <div class="donut-card-content">
-        <div class="breakup-info">
-          <div class="breakup-number" id="breakup-total">{{ stats.get('found', 0) }}</div>
-          <div class="growth-badge">↑ Live Portals</div>
-          <div class="chart-legend-dots">
-            <div class="legend-dot-item">
-              <span class="legend-dot" style="background:#5d87ff;"></span> LinkedIn
-            </div>
-            <div class="legend-dot-item">
-              <span class="legend-dot" style="background:#49beff;"></span> Indeed
-            </div>
-            <div class="legend-dot-item">
-              <span class="legend-dot" style="background:#ffae1f;"></span> Naukri
-            </div>
-          </div>
-        </div>
-        <div class="donut-canvas-wrap">
-          <canvas id="platformChart"></canvas>
-        </div>
-      </div>
-    </div>
-
-    <!-- Card B: Target Locations (Interactive Add / Remove) -->
-    <div class="modern-card" style="padding:20px 24px;">
-      <div class="card-top-bar" style="margin-bottom:12px;">
-        <div class="card-title-group">
-          <h2>📍 Target Locations</h2>
-          <p>Cities actively searched across portals</p>
-        </div>
-      </div>
-      <div class="location-pills-row" id="locations-container" style="margin-bottom:14px;">
-        {% for city in locations %}
-        <span class="city-pill" style="display:inline-flex;align-items:center;gap:6px;">
-          <span>📌 {{ city }}</span>
-          <button onclick="removeLocation('{{ city }}')" style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:12px;display:flex;align-items:center;padding:0;" title="Remove Location">✕</button>
-        </span>
-        {% endfor %}
-      </div>
-      <div style="display:flex;gap:8px;">
-        <input type="text" id="new-loc-input" placeholder="Add city (e.g. Pune, Dubai)..." style="flex:1;padding:7px 14px;border-radius:var(--radius-pill);border:1px solid var(--border-color);background:var(--bg-surface-alt);outline:none;font-size:12.5px;font-family:inherit;" onkeydown="if(event.key==='Enter') addLocation()">
-        <button onclick="addLocation()" class="btn-search-trigger" style="padding:7px 16px;font-size:12.5px;">+ Add</button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- ── Recent Job Matches Table ── -->
-<div class="table-card">
-  <div class="table-card-header">
-    <div class="table-title-group">
-      <h2>🏆 Recent Job Matches</h2>
-      <p>Latest QA Automation & SDET opportunities matched by AI</p>
-    </div>
-    <a href="{{ url_for('jobs') }}" class="table-view-all-link">View All Jobs →</a>
-  </div>
-
-  <table class="custom-table">
+  <table class="tbl" id="recent-jobs-table">
     <thead>
       <tr>
-        <th>Job & Company</th>
+        <th>Job &amp; company</th>
         <th>Location</th>
         <th>Salary / CTC</th>
         <th>Platform</th>
-        <th>AI Match Score</th>
+        <th>AI match score</th>
         <th>Status</th>
-        <th>Website & Action</th>
+        <th>Website &amp; action</th>
       </tr>
     </thead>
     <tbody>
@@ -171,72 +166,63 @@
         <td>
           <div class="company-cell">
             <div class="company-avatar-box">
-              <img src="https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://{{ clean_co }}.com&size=64" 
-                   alt="{{ job.company }}" 
+              <img src="https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://{{ clean_co or 'company' }}.com&size=64"
+                   alt="{{ job.company or 'Company' }}"
                    class="company-logo-img"
-                   onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+                   onerror="this.style.display='none'; if (this.nextElementSibling) this.nextElementSibling.style.display='grid';"
                    loading="lazy">
               <span class="company-initial-fallback" style="display:none;">{{ (job.company or 'J')[:1]|upper }}</span>
             </div>
-            <div style="max-width:240px;">
+            <div>
               {% if job.job_url %}
-                <a href="{{ job.job_url }}" target="_blank" class="job-title-link" title="Open Job Posting">{{ job.title }}</a>
+                <a href="{{ job.job_url }}" target="_blank" rel="noopener" class="job-title-link">{{ job.title }}</a>
               {% else %}
                 <span class="job-title-link">{{ job.title }}</span>
               {% endif %}
-              <div class="company-name-text">{{ job.company }}</div>
+              <small>{{ job.company }}</small>
             </div>
           </div>
         </td>
-        <td style="color:var(--text-body);font-size:12.5px;max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="{{ job.location }}">
-          📍 {{ job.location or 'India / Remote' }}
+        <td>{{ job.location or 'India / Remote' }}</td>
+        <td>{{ job.salary or 'Competitive' }}</td>
+        <td>
+          <span class="platform-pill {{ (job.platform or 'other')|lower }}">{{ job.platform.title() if job.platform else 'Portal' }}</span>
         </td>
         <td>
-          {% if job.salary and job.salary not in ('', 'Not Disclosed', 'As per company standard') %}
-            <span class="salary-tag">💰 {{ job.salary }}</span>
-          {% else %}
-            <span class="salary-tag not-disclosed">💰 {{ job.salary or 'Competitive' }}</span>
-          {% endif %}
+          {% set sc = (job.ai_score or 75)|float|round|int %}
+          <span class="pill {% if sc >= 88 %}hi{% elif sc >= 60 %}mid{% endif %}">{{ sc }}%</span>
         </td>
         <td>
-          <span class="platform-pill {{ job.platform }}">{{ job.platform.title() }}</span>
+          <select data-job-id="{{ job.id }}" onchange="updateJobStatus({{ job.id }}, this.value)" aria-label="Status">
+            <option value="found" {% if job.status == 'found' %}selected{% endif %}>New</option>
+            <option value="scored" {% if job.status == 'scored' %}selected{% endif %}>Scored</option>
+            <option value="pending_approval" {% if job.status == 'pending_approval' %}selected{% endif %}>In review</option>
+            <option value="applied" {% if job.status == 'applied' %}selected{% endif %}>Applied</option>
+            <option value="interview" {% if job.status == 'interview' %}selected{% endif %}>Interview</option>
+            <option value="rejected" {% if job.status == 'rejected' %}selected{% endif %}>Rejected</option>
+          </select>
         </td>
         <td>
-          {% if job.ai_score and job.ai_score > 0 %}
-          <div class="score-progress-wrap">
-            <div class="score-progress-track">
-              <div class="score-progress-fill" data-score="{{ job.ai_score }}"></div>
-            </div>
-            <span class="score-number-label">{{ "%.0f"|format(job.ai_score) }}%</span>
-          </div>
-          {% else %}
-          <span class="score-number-label" style="color:var(--text-muted);font-weight:600;">74%</span>
-          {% endif %}
-        </td>
-        <td>
-          <span class="status-pill {{ job.status }}">{{ job.status.replace('_',' ').title() }}</span>
-        </td>
-        <td>
-          <div style="display:inline-flex;align-items:center;gap:6px;">
-            {% if job.job_url %}
-              <a href="{{ job.job_url }}" target="_blank" class="btn-visit-website" title="Open job posting on {{ job.platform.title() }}">
-                Apply ↗
-              </a>
-            {% else %}
-              <span class="btn-visit-website disabled">Direct</span>
+          <div class="acts">
+            <!-- Safe JSON payload for modal preview -->
+            <script type="application/json" id="job-data-{{ job.id }}">
+              {{ {'title': job.title or '', 'summary': job.ai_summary or '', 'cover': job.cover_letter or ''}|tojson }}
+            </script>
+            {% if job.ai_summary or job.cover_letter %}
+              <button class="ghost" type="button" onclick="openJobFitById({{ job.id }})">Fit</button>
             {% endif %}
-            {% if job.ai_summary %}
-              <button class="btn-ai-analysis" onclick="showModal(`{{ job.title|e }}`, `{{ job.ai_summary|e }}`, `{{ (job.cover_letter or '')|e }}`)" title="Review AI Match & Tailored Cover Letter">
-                💡 Fit
-              </button>
+            {% if job.job_url %}
+              <a href="{{ job.job_url }}" target="_blank" rel="noopener" class="ghost" style="color:inherit;text-decoration:none;">Open</a>
             {% endif %}
           </div>
         </td>
       </tr>
       {% else %}
       <tr>
-        <td colspan="7" style="text-align:center;padding:48px 20px;color:var(--text-muted);">
-          No jobs found yet. Click <strong>Search Jobs Now</strong> in the top header to discover fresh jobs!
+        <td colspan="7">
+          <div class="empty" style="justify-content:center;padding:36px 16px;">
+            <p>No jobs found yet. Click <b>Search jobs now</b> in the top header to discover fresh roles!</p>
+          </div>
         </td>
       </tr>
       {% endfor %}
@@ -244,34 +230,84 @@
   </table>
 </div>
 
-<!-- ── Detail Modal Popup ── -->
+<!-- ── Job Fit Modal ── -->
 <div class="modal-overlay" id="detail-modal" onclick="closeModal()">
   <div class="modal-box" onclick="event.stopPropagation()">
-    <button class="modal-close-btn" onclick="closeModal()">✕</button>
-    <h2 id="modal-job-title" style="font-size:18px;font-weight:800;color:var(--text-dark);margin-bottom:12px;"></h2>
-    <div class="modal-section-title">🧠 AI Match Analysis</div>
-    <p id="modal-ai-summary" style="font-size:13.5px;color:var(--text-body);line-height:1.6;"></p>
+    <button class="modal-close-btn" type="button" onclick="closeModal()">✕</button>
+    <h2 id="modal-job-title" style="font:700 20px var(--display);color:var(--ink);margin-bottom:12px;"></h2>
+    <div style="font-weight:600;font-size:13px;color:var(--teal);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:4px;">🧠 AI match analysis</div>
+    <p id="modal-ai-summary" style="font-size:14px;color:var(--muted);line-height:1.6;margin-bottom:16px;"></p>
     
-    <div class="modal-section-title">✉️ Tailored Cover Letter</div>
-    <div class="modal-pre-box" id="modal-cover-letter"></div>
+    <div style="font-weight:600;font-size:13px;color:var(--teal);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:4px;">✉️ Tailored cover letter</div>
+    <div id="modal-cover-letter" class="out" style="max-height:180px;overflow-y:auto;"></div>
   </div>
 </div>
-
 {% endblock %}
 
 {% block scripts %}
 <script>
-  // Apply progress widths safely from data-score attribute
-  function updateScoreBars() {
-    document.querySelectorAll('.score-progress-fill[data-score]').forEach(el => {
-      const score = parseFloat(el.getAttribute('data-score')) || 0;
-      el.style.width = Math.min(100, Math.max(0, score)) + '%';
-    });
-  }
-  updateScoreBars();
+  let autoAgentActive = true;
+  let currentRange = 'w';
+  let activityChart = null;
 
-  // Modal handlers
-  function showModal(title, summary, coverLetter) {
+  // ── Open Job Fit Modal by ID (Safe JSON parse) ──
+  function openJobFitById(jobId) {
+    const el = document.getElementById('job-data-' + jobId);
+    if (!el) return;
+    try {
+      const data = JSON.parse(el.textContent);
+      showJobFitModal(data.title, data.summary, data.cover);
+    } catch (err) {
+      console.error('Failed to parse job modal data:', err);
+    }
+  }
+
+  // ── Auto-Score Agent Toggle ──
+  function toggleAutoAgent() {
+    autoAgentActive = !autoAgentActive;
+    const pulse = document.getElementById('agent-pulse');
+    const statusText = document.getElementById('agent-status-text');
+    const descText = document.getElementById('agent-desc-text');
+
+    if (autoAgentActive) {
+      if (pulse) {
+        pulse.style.background = 'var(--ok)';
+        pulse.style.animation = 'p 2s infinite';
+      }
+      if (statusText) statusText.textContent = 'Auto-score on';
+      if (descText) descText.textContent = 'New jobs are scored when added';
+      toast('Auto-score agent resumed');
+    } else {
+      if (pulse) {
+        pulse.style.background = 'var(--muted)';
+        pulse.style.animation = 'none';
+      }
+      if (statusText) statusText.textContent = 'Auto-score paused';
+      if (descText) descText.textContent = 'Click to resume automated scoring';
+      toast('Auto-score agent paused');
+    }
+  }
+
+  // ── Job Status Dropdown Handler ──
+  async function updateJobStatus(jobId, newStatus) {
+    try {
+      const res = await fetch(`/api/job/${jobId}/status`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus })
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast(`Job status updated to ${newStatus.replace('_', ' ')}`);
+        refreshStats();
+      }
+    } catch (e) {
+      toast('Failed to update status');
+    }
+  }
+
+  // ── Modal Handlers ──
+  function showJobFitModal(title, summary, coverLetter) {
     document.getElementById('modal-job-title').textContent = title;
     document.getElementById('modal-ai-summary').textContent = summary || 'No summary available.';
     document.getElementById('modal-cover-letter').textContent = coverLetter || 'No cover letter generated yet.';
@@ -281,127 +317,138 @@
   function closeModal() {
     document.getElementById('detail-modal').classList.remove('active');
   }
-
   document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
 
-  // ── Monthly Activity Bar Chart (Dynamic from DB) ──
-  const tCtx = document.getElementById('timelineChart').getContext('2d');
-  const timelineChart = new Chart(tCtx, {
-    type: 'bar',
-    data: {
-      labels: ['May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov'],
-      datasets: [
-        {
-          label: 'Applications',
-          data: [0, 0, 0, 0, 0, 0, 0],
-          backgroundColor: '#5d87ff',
-          borderRadius: 6,
-          barPercentage: 0.45,
+  // ── Activity Bar Chart (Chart.js) ──
+  const aCanvas = document.getElementById('activityChart');
+  if (aCanvas && typeof Chart !== 'undefined') {
+    const aCtx = aCanvas.getContext('2d');
+    activityChart = new Chart(aCtx, {
+      type: 'bar',
+      data: {
+        labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+        datasets: [
+          {
+            label: 'Jobs Found',
+            data: [12, 19, 8, 15, 22, 14, 25],
+            backgroundColor: '#3B82C4',
+            borderRadius: 4,
+            barPercentage: 0.5
+          },
+          {
+            label: 'Applications',
+            data: [3, 7, 2, 6, 8, 5, 11],
+            backgroundColor: '#0E7C73',
+            borderRadius: 4,
+            barPercentage: 0.5
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false }
         },
-        {
-          label: 'Jobs Found',
-          data: [0, 0, 0, 0, 0, 0, 0],
-          backgroundColor: '#49beff',
-          borderRadius: 6,
-          barPercentage: 0.45,
-        }
-      ]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: true,
-      plugins: {
-        legend: {
-          position: 'top',
-          align: 'end',
-          labels: {
-            boxWidth: 10,
-            borderRadius: 3,
-            usePointStyle: true,
-            color: '#7c8fac',
-            font: { family: 'Plus Jakarta Sans', size: 12, weight: 600 }
+        scales: {
+          y: {
+            beginAtZero: true,
+            grid: { color: 'rgba(128,128,128,0.12)' },
+            ticks: { color: '#5C6B68', font: { family: 'DM Sans', size: 11 }, precision: 0 }
+          },
+          x: {
+            grid: { display: false },
+            ticks: { color: '#5C6B68', font: { family: 'DM Sans', size: 11 } }
           }
         }
-      },
-      scales: {
-        y: {
-          beginAtZero: true,
-          grid: { color: '#f1f5f9' },
-          ticks: { color: '#7c8fac', font: { family: 'Plus Jakarta Sans', size: 11 }, precision: 0 }
-        },
-        x: {
-          grid: { display: false },
-          ticks: { color: '#7c8fac', font: { family: 'Plus Jakarta Sans', size: 11 } }
-        }
       }
-    }
-  });
+    });
+  }
 
-  // ── Platform Donut Chart ──
-  const pCtx = document.getElementById('platformChart').getContext('2d');
-  const platChart = new Chart(pCtx, {
-    type: 'doughnut',
-    data: {
-      labels: ['LinkedIn', 'Indeed', 'Naukri', 'Glassdoor', 'Internshala'],
-      datasets: [{
-        data: [1, 1, 1, 0, 0],
-        backgroundColor: ['#5d87ff', '#49beff', '#ffae1f', '#13deb9', '#7b5dd4'],
-        borderWidth: 0,
-        hoverOffset: 4
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      cutout: '74%',
-      plugins: {
-        legend: { display: false }
-      }
-    }
-  });
+  function setChartRange(range) {
+    currentRange = range;
+    const btnW = document.getElementById('range-w');
+    const btnM = document.getElementById('range-m');
+    if (btnW) btnW.classList.toggle('active', range === 'w');
+    if (btnM) btnM.classList.toggle('active', range === 'm');
 
-  // Load Dynamic Monthly Activity from DB
+    if (!activityChart) return;
+
+    if (range === 'w') {
+      activityChart.data.labels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+      activityChart.data.datasets[0].data = [12, 19, 8, 15, 22, 14, 25];
+      activityChart.data.datasets[1].data = [3, 7, 2, 6, 8, 5, 11];
+      activityChart.update();
+    } else {
+      loadMonthlyActivity();
+    }
+  }
+
   async function loadMonthlyActivity() {
     try {
       const res = await fetch('/api/monthly_stats');
       const data = await res.json();
-      if (data && data.labels) {
-        timelineChart.data.labels = data.labels;
-        timelineChart.data.datasets[0].data = data.applied || [];
-        timelineChart.data.datasets[1].data = data.found || [];
-        timelineChart.update();
+      if (data && data.labels && activityChart) {
+        activityChart.data.labels = data.labels;
+        activityChart.data.datasets[0].data = data.found || [];
+        activityChart.data.datasets[1].data = data.applied || [];
+        activityChart.update();
       }
-    } catch(e) {}
+    } catch (e) {}
   }
 
-  // Live Refresh Logic
+  // ── Platform Breakdown Updater ──
+  async function loadPlatformData() {
+    try {
+      const res = await fetch('/api/jobs');
+      const jobs = await res.json();
+      if (Array.isArray(jobs)) {
+        const counts = { linkedin: 0, indeed: 0, naukri: 0 };
+        jobs.forEach(j => {
+          const p = (j.platform || '').toLowerCase();
+          if (counts[p] !== undefined) counts[p]++;
+        });
+        const total = Math.max(1, jobs.length);
+
+        ['linkedin', 'indeed', 'naukri'].forEach(p => {
+          const count = counts[p] || 0;
+          const cntEl = document.getElementById(`plat-cnt-${p}`);
+          const barEl = document.getElementById(`plat-bar-${p}`);
+          if (cntEl) cntEl.textContent = `${count} ${count === 1 ? 'job' : 'jobs'}`;
+          if (barEl) barEl.style.width = `${Math.min(100, Math.round((count / total) * 100))}%`;
+        });
+      }
+    } catch (e) {}
+  }
+
+  // ── Live Stats Refresher ──
   async function refreshStats() {
     try {
-      const r = await fetch('/api/stats');
-      const s = await r.json();
+      const res = await fetch('/api/stats');
+      const s = await res.json();
+      const d = s.found || 1;
       if (document.getElementById('stat-found')) document.getElementById('stat-found').textContent = s.found || 0;
       if (document.getElementById('stat-scored')) document.getElementById('stat-scored').textContent = s.scored || 0;
       if (document.getElementById('stat-applied')) document.getElementById('stat-applied').textContent = s.applied || 0;
       if (document.getElementById('stat-interview')) document.getElementById('stat-interview').textContent = s.interview || 0;
-      if (document.getElementById('stat-pending')) document.getElementById('stat-pending').textContent = s.pending_approval || 0;
-      if (document.getElementById('breakup-total')) document.getElementById('breakup-total').textContent = s.found || 0;
-    } catch(e) {}
-  }
 
-  async function loadPlatformData() {
-    try {
-      const r = await fetch('/api/jobs');
-      const jobs = await r.json();
-      if (Array.isArray(jobs) && jobs.length > 0) {
-        const c = { linkedin:0, indeed:0, naukri:0, glassdoor:0, internshala:0 };
-        jobs.forEach(j => { if(c[j.platform] !== undefined) c[j.platform]++; });
-        platChart.data.datasets[0].data = Object.values(c);
-        platChart.update('none');
+      const scoredPct = Math.min(100, Math.round(((s.scored || 0) / d) * 100));
+      const appliedPct = Math.min(100, Math.round(((s.applied || 0) / d) * 100));
+      const interviewPct = Math.min(100, Math.round(((s.interview || 0) / d) * 100));
+
+      if (document.getElementById('bar-scored')) document.getElementById('bar-scored').style.width = scoredPct + '%';
+      if (document.getElementById('bar-applied')) document.getElementById('bar-applied').style.width = appliedPct + '%';
+      if (document.getElementById('bar-interview')) document.getElementById('bar-interview').style.width = interviewPct + '%';
+
+      const q = s.pending_approval || 0;
+      const qDesc = document.getElementById('queue-desc');
+      if (qDesc) {
+        qDesc.textContent = q > 0 ? `${q} role${q > 1 ? 's' : ''} waiting for your review.` : 'Nothing waiting for approval.';
       }
-    } catch(e) {}
+    } catch (e) {}
   }
 
-  // ── Dynamic Location Add / Remove Handlers ──
+  // ── Locations Management ──
   async function addLocation() {
     const input = document.getElementById('new-loc-input');
     const loc = input.value.trim();
@@ -416,8 +463,9 @@
       if (data.success) {
         renderLocations(data.locations);
         input.value = '';
+        toast(`Location "${loc}" added`);
       }
-    } catch(e) {}
+    } catch (e) {}
   }
 
   async function removeLocation(loc) {
@@ -430,26 +478,24 @@
       const data = await res.json();
       if (data.success) {
         renderLocations(data.locations);
+        toast(`Location "${loc}" removed`);
       }
-    } catch(e) {}
+    } catch (e) {}
   }
 
   function renderLocations(locations) {
     const container = document.getElementById('locations-container');
     container.innerHTML = locations.map(city => `
-      <span class="city-pill" style="display:inline-flex;align-items:center;gap:6px;">
-        <span>📌 ${city}</span>
-        <button onclick="removeLocation('${city}')" style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:12px;display:flex;align-items:center;padding:0;" title="Remove Location">✕</button>
+      <span class="chip" style="margin:0 8px 8px 0;">
+        📍 ${city}
+        <button type="button" onclick="removeLocation('${city}')" title="Remove ${city}">✕</button>
       </span>
     `).join('');
   }
 
+  // Initial loads
   refreshStats();
   loadPlatformData();
-  loadMonthlyActivity();
-  setInterval(() => {
-    refreshStats();
-    loadMonthlyActivity();
-  }, 60000);
+  setInterval(refreshStats, 30000);
 </script>
 {% endblock %}

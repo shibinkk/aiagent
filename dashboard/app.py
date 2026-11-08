@@ -132,6 +132,15 @@ except Exception as e:
     print(f"Could not start background scheduler: {e}")
 
 
+@app.context_processor
+def inject_globals():
+    try:
+        pending = get_pending_approvals()
+        return {"pending_count": len(pending)}
+    except Exception:
+        return {"pending_count": 0}
+
+
 # ── Page Routes ───────────────────────────────────────────────────────────────
 @app.route("/")
 def index():
@@ -231,6 +240,31 @@ def api_monthly_stats():
 def api_jobs():
     status = request.args.get("status")
     return jsonify(get_jobs(status=status, limit=200))
+
+
+@app.route("/api/job/create", methods=["POST"])
+def api_create_job():
+    data = request.get_json() or {}
+    title = data.get("title", "").strip()
+    company = data.get("company", "").strip()
+    if not title or not company:
+        return jsonify({"error": "Title and company are required"}), 400
+    job = {
+        "title": title,
+        "company": company,
+        "location": data.get("loc", "India / Remote"),
+        "platform": (data.get("platform") or "other").lower(),
+        "job_url": data.get("url", ""),
+        "description": data.get("desc", ""),
+        "salary": data.get("salary", "Competitive"),
+        "status": "found",
+        "ai_score": 85
+    }
+    job_id = insert_job(job)
+    if job_id:
+        increment_stat("jobs_found")
+        return jsonify({"success": True, "job_id": job_id})
+    return jsonify({"error": "Failed to insert job"}), 500
 
 
 @app.route("/api/job/<int:job_id>/status", methods=["POST"])

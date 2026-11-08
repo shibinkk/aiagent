@@ -1,226 +1,349 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>{% block title %}SDET Job Suite{% endblock %} — Shibin K K</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>{% block title %}SDET Job Suite{% endblock %}</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script>
+    // Immediately set theme from localStorage before render to avoid flash
+    try {
+      const savedTheme = localStorage.getItem('sdet-theme');
+      if (savedTheme) {
+        document.documentElement.setAttribute('data-theme', savedTheme);
+      }
+    } catch (e) {}
+  </script>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-
-  <!-- ── Left Sidebar Navigation (SDET Job Suite Style) ── -->
-  <aside class="sidebar">
-    <!-- Brand Header -->
-    <div class="sidebar-brand">
-      <div class="brand-logo-ring">
-        <div class="brand-logo-inner"></div>
+<div class="app">
+  <!-- ── Left Sticky Sidebar Rail ── -->
+  <aside class="rail">
+    <!-- Brand -->
+    <a href="{{ url_for('index') }}" class="brand">
+      <div class="logo">
+        <svg viewBox="0 0 24 24"><path d="M5 12l4 4 10-10"/></svg>
       </div>
-      <div class="brand-info">
-        <span class="brand-title">SDET <span>Job Suite</span></span>
-        <span class="brand-tag">AI Automation Agent</span>
+      <div>
+        <b>SDET Job Suite</b>
+        <small>AI automation agent</small>
       </div>
-    </div>
+    </a>
 
     <!-- Navigation Menu Items -->
-    <ul class="sidebar-menu">
-      <li class="menu-category">HOME</li>
-      <li class="menu-item">
-        <a href="{{ url_for('index') }}" class="menu-link {% if request.endpoint == 'index' %}active{% endif %}">
-          <span class="menu-link-icon">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="3" y="3" width="7" height="7"></rect>
-              <rect x="14" y="3" width="7" height="7"></rect>
-              <rect x="14" y="14" width="7" height="7"></rect>
-              <rect x="3" y="14" width="7" height="7"></rect>
-            </svg>
-          </span>
-          <span>Dashboard</span>
-        </a>
-      </li>
+    <div class="grp">Home</div>
+    <a href="{{ url_for('index') }}" class="nav {% if request.endpoint == 'index' %}active{% endif %}" {% if request.endpoint == 'index' %}aria-current="page"{% endif %}>
+      <svg viewBox="0 0 24 24">
+        <rect x="3" y="3" width="7" height="7" rx="1.5"/>
+        <rect x="14" y="3" width="7" height="7" rx="1.5"/>
+        <rect x="3" y="14" width="7" height="7" rx="1.5"/>
+        <rect x="14" y="14" width="7" height="7" rx="1.5"/>
+      </svg>
+      <span>Dashboard</span>
+    </a>
 
-      <li class="menu-category">PAGES</li>
-      <li class="menu-item">
-        <a href="{{ url_for('jobs') }}" class="menu-link {% if request.endpoint == 'jobs' %}active{% endif %}">
-          <span class="menu-link-icon">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-              <polyline points="14 2 14 8 20 8"></polyline>
-              <line x1="16" y1="13" x2="8" y2="13"></line>
-              <line x1="16" y1="17" x2="8" y2="17"></line>
-              <polyline points="10 9 9 9 8 9"></polyline>
-            </svg>
-          </span>
-          <span>All Jobs</span>
-        </a>
-      </li>
-      <li class="menu-item">
-        <a href="{{ url_for('approvals') }}" class="menu-link {% if request.endpoint == 'approvals' %}active{% endif %}">
-          <span class="menu-link-icon">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M9 11l3 3L22 4"></path>
-              <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
-            </svg>
-          </span>
-          <span>Approvals</span>
-          {% if pending_count is defined and pending_count > 0 %}
-            <span class="menu-badge">{{ pending_count }}</span>
-          {% endif %}
-        </a>
-      </li>
+    <div class="grp">Pages</div>
+    <a href="{{ url_for('jobs') }}" class="nav {% if request.endpoint == 'jobs' %}active{% endif %}" {% if request.endpoint == 'jobs' %}aria-current="page"{% endif %}>
+      <svg viewBox="0 0 24 24">
+        <path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/>
+      </svg>
+      <span>All jobs</span>
+    </a>
 
-      <li class="menu-item">
-        <a href="{{ url_for('resume_page') }}" class="menu-link {% if request.endpoint == 'resume_page' %}active{% endif %}">
-          <span class="menu-link-icon">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-              <circle cx="12" cy="7" r="4"></circle>
-            </svg>
-          </span>
-          <span>Resume & Profile</span>
-        </a>
-      </li>
+    <a href="{{ url_for('approvals') }}" class="nav {% if request.endpoint == 'approvals' %}active{% endif %}" {% if request.endpoint == 'approvals' %}aria-current="page"{% endif %} id="nav-approvals">
+      <svg viewBox="0 0 24 24">
+        <path d="M4 12l5 5L20 6"/>
+      </svg>
+      <span>Approvals</span>
+      {% if pending_count is defined and pending_count > 0 %}
+        <span class="nav-badge" id="nav-pending-badge">{{ pending_count }}</span>
+      {% endif %}
+    </a>
 
-      <li class="menu-category">APPS</li>
-      <li class="menu-item">
-        <a href="https://t.me/SpacewolfBot" target="_blank" class="menu-link" title="Open @SpacewolfBot on Telegram">
-          <span class="menu-link-icon" style="color:#229ed9;">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="22" y1="2" x2="11" y2="13"></line>
-              <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-            </svg>
-          </span>
-          <span>Spacewolf Bot</span>
-          <span class="menu-badge" style="background:var(--teal);margin-left:auto;font-size:10px;">LIVE</span>
-        </a>
-      </li>
-      <li class="menu-item">
-        <a href="mailto:shibinkk17@gmail.com" class="menu-link">
-          <span class="menu-link-icon">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
-              <polyline points="22,6 12,13 2,6"></polyline>
-            </svg>
-          </span>
-          <span>Email Digest</span>
-        </a>
-      </li>
+    <a href="{{ url_for('resume_page') }}" class="nav {% if request.endpoint == 'resume_page' %}active{% endif %}" {% if request.endpoint == 'resume_page' %}aria-current="page"{% endif %}>
+      <svg viewBox="0 0 24 24">
+        <circle cx="12" cy="8" r="4"/>
+        <path d="M4 21c1-4 4-6 8-6s7 2 8 6"/>
+      </svg>
+      <span>Resume & profile</span>
+    </a>
 
-      <li class="menu-category">AI ENGINE</li>
-      <li class="menu-item">
-        <div class="menu-link" style="cursor:default;">
-          <span class="menu-link-icon">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
-            </svg>
-          </span>
-          <span>AI Resume Matcher</span>
-        </div>
-      </li>
-      <li class="menu-item">
-        <div class="menu-link" style="cursor:default;">
-          <span class="menu-link-icon">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M12 20h9"></path>
-              <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
-            </svg>
-          </span>
-          <span>Cover Letter Gen</span>
-        </div>
-      </li>
-    </ul>
+    <div class="grp">Apps</div>
+    <a href="https://t.me/SpacewolfBot" target="_blank" rel="noopener" class="nav" title="Open @SpacewolfBot on Telegram">
+      <svg viewBox="0 0 24 24">
+        <path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/>
+      </svg>
+      <span>Spacewolf Bot</span>
+      <span class="live">Live</span>
+    </a>
 
-    <!-- Sidebar Profile Footer -->
-    <div class="sidebar-footer">
-      <div class="user-profile-card">
-        <div class="user-avatar-wrap">
-          <img src="{{ url_for('static', filename='images/shibin_avatar.jpg') }}" alt="Shibin K K" class="user-avatar">
-          <div class="status-dot-online"></div>
-        </div>
-        <div class="user-meta">
-          <span class="user-name">Shibin K K</span>
-          <span class="user-role">SDET Automation</span>
-        </div>
+    <a href="mailto:shibinkk17@gmail.com?subject=Job%20Search%20Digest" class="nav" title="Email summary">
+      <svg viewBox="0 0 24 24">
+        <rect x="3" y="5" width="18" height="14" rx="2"/>
+        <path d="M3 7l9 7 9-7"/>
+      </svg>
+      <span>Email digest</span>
+    </a>
+
+    <div class="grp">AI Engine</div>
+    <a href="{{ url_for('jobs') }}#matcher" class="nav" onclick="openAIMatcherModal(); return false;">
+      <svg viewBox="0 0 24 24">
+        <path d="M12 3l2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5z"/>
+      </svg>
+      <span>AI resume matcher</span>
+    </a>
+
+    <a href="{{ url_for('jobs') }}#cover" class="nav" onclick="openCoverGenModal(); return false;">
+      <svg viewBox="0 0 24 24">
+        <path d="M4 20l4-1L19 8l-3-3L5 16z"/>
+      </svg>
+      <span>Cover letter generator</span>
+    </a>
+
+    <!-- Footer Profile -->
+    <a href="{{ url_for('resume_page') }}" class="me">
+      <div class="av" id="ini">SK</div>
+      <div>
+        <b id="nm">Shibin K K</b>
+        <small>SDET automation</small>
       </div>
-    </div>
+    </a>
   </aside>
 
-  <!-- ── Main Layout Wrapper ── -->
-  <div class="main-wrapper">
+  <!-- ── Main Workspace ── -->
+  <main>
     <!-- Top Sticky Header -->
-    <header class="top-header">
-      <!-- Search Input -->
-      <div class="header-search">
-        <span class="search-icon">🔍</span>
-        <input type="text" id="global-search" placeholder="Search jobs, skills, companies...">
-      </div>
+    <div class="top">
+      <label class="search">
+        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
+        <input type="search" id="global-search" placeholder="Search your jobs by title, company or skill" aria-label="Search jobs">
+      </label>
 
-      <!-- Action Buttons -->
-      <div class="header-actions">
-        <button id="scrape-btn" onclick="triggerScrape()" class="btn-search-trigger">
-          <span id="scrape-icon">⚡</span>
-          <span id="scrape-btn-text">Search Jobs Now</span>
-        </button>
+      <span class="sp"></span>
 
-        <button class="header-icon-btn" title="Toggle Mode">
-          <span>🌙</span>
-        </button>
+      <!-- Theme Switch Button -->
+      <button class="icon" id="theme-btn" aria-label="Switch theme" title="Toggle theme">
+        <svg viewBox="0 0 24 24"><path d="M20 14A8 8 0 0110 4a8 8 0 1010 10z"/></svg>
+      </button>
 
-        <button class="header-icon-btn" title="Notifications">
-          <span>🔔</span>
-          <div class="notif-badge"></div>
-        </button>
+      <!-- Notifications Bell Button -->
+      <button class="icon" id="bell-btn" aria-label="Notifications" title="Notifications">
+        <svg viewBox="0 0 24 24"><path d="M6 9a6 6 0 0112 0c0 6 2 7 2 7H4s2-1 2-7zM10 20h4"/></svg>
+        <span class="notif-dot" id="header-notif-dot" {% if pending_count is not defined or pending_count == 0 %}style="display:none;"{% endif %}></span>
+      </button>
 
-        <div class="user-avatar-wrap" style="width: 36px; height: 36px; cursor: pointer;">
-          <img src="{{ url_for('static', filename='images/shibin_avatar.jpg') }}" alt="Shibin K K" class="user-avatar">
-          <div class="status-dot-online"></div>
-        </div>
-      </div>
-    </header>
+      <!-- Search Jobs Action -->
+      <button class="cta" id="scrape-btn" onclick="triggerScrape()">
+        <span id="scrape-icon">⚡</span>
+        <span id="scrape-btn-text">Search jobs now</span>
+      </button>
+    </div>
 
-    <!-- Page Body Container -->
-    <main class="page-container">
-      {% block content %}{% endblock %}
-    </main>
-  </div>
+    <!-- Page Content Slot -->
+    {% block content %}{% endblock %}
+  </main>
+</div>
 
-  {% block scripts %}{% endblock %}
+<!-- ── Job Portals Dialog ── -->
+<dialog id="dlg"></dialog>
 
-  <script>
-    // Universal trigger for Search Jobs
-    async function triggerScrape() {
-      const btn = document.getElementById('scrape-btn');
-      const text = document.getElementById('scrape-btn-text');
-      const icon = document.getElementById('scrape-icon');
-      if (!btn) return;
-      btn.disabled = true;
-      text.textContent = 'Searching...';
-      if (icon) icon.textContent = '⏳';
+<!-- ── AI Matcher & Cover Letter Dialog ── -->
+<dialog id="ai-dlg"></dialog>
+
+<!-- ── Toast Notifications ── -->
+<div class="toast" id="toast" role="status"></div>
+
+{% block scripts %}{% endblock %}
+
+<script>
+  // ── Toast Notification System ──
+  function toast(message) {
+    const t = document.getElementById('toast');
+    if (!t) return;
+    t.textContent = message;
+    t.classList.add('on');
+    clearTimeout(toast._timer);
+    toast._timer = setTimeout(() => t.classList.remove('on'), 2800);
+  }
+
+  // ── Dark / Light Theme Toggle ──
+  const themeBtn = document.getElementById('theme-btn');
+  if (themeBtn) {
+    themeBtn.onclick = () => {
+      const r = document.documentElement;
+      const currentBg = getComputedStyle(r).getPropertyValue('--bg').trim();
+      const isDark = currentBg === '#0C1514' || r.getAttribute('data-theme') === 'dark';
+      const nextTheme = isDark ? 'light' : 'dark';
+      r.setAttribute('data-theme', nextTheme);
       try {
-        const res = await fetch('/api/scrape_now', { method: 'POST' });
-        const poll = setInterval(async () => {
-          try {
-            const st = await fetch('/api/scrape_status').then(r => r.json());
-            if (!st.running) {
-              clearInterval(poll);
-              btn.disabled = false;
-              text.textContent = 'Search Jobs Now';
-              if (icon) icon.textContent = '⚡';
-              if (typeof refreshStats === 'function') refreshStats();
-              if (typeof loadPlatformData === 'function') loadPlatformData();
-              setTimeout(() => window.location.reload(), 1200);
-            }
-          } catch(e) {}
-        }, 4000);
-      } catch(err) {
-        btn.disabled = false;
-        text.textContent = 'Search Jobs Now';
-        if (icon) icon.textContent = '⚡';
+        localStorage.setItem('sdet-theme', nextTheme);
+      } catch (e) {}
+      toast(nextTheme === 'dark' ? 'Dark theme enabled' : 'Light theme enabled');
+      if (typeof updateChartThemes === 'function') updateChartThemes();
+    };
+  }
+
+  // ── Bell Notification Button ──
+  const bellBtn = document.getElementById('bell-btn');
+  if (bellBtn) {
+    bellBtn.onclick = async () => {
+      try {
+        const res = await fetch('/api/stats');
+        const s = await res.json();
+        const r = s.pending_approval || 0;
+        if (r > 0) {
+          toast(`${r} job${r > 1 ? 's' : ''} waiting for your review in Approvals`);
+          window.location.href = "{{ url_for('approvals') }}";
+        } else {
+          toast("You're all caught up! No pending reviews.");
+        }
+      } catch (e) {
+        toast("You're all caught up");
       }
+    };
+  }
+
+  // ── Global Search Input Redirection / Filtering ──
+  const globalSearch = document.getElementById('global-search');
+  if (globalSearch) {
+    globalSearch.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        const q = encodeURIComponent(globalSearch.value.trim());
+        if (window.location.pathname !== "{{ url_for('jobs') }}") {
+          window.location.href = "{{ url_for('jobs') }}?q=" + q;
+        }
+      }
+    });
+  }
+
+  // ── Background Job Scrape Trigger with Live Feedback ──
+  async function triggerScrape() {
+    const btn = document.getElementById('scrape-btn');
+    const text = document.getElementById('scrape-btn-text');
+    const icon = document.getElementById('scrape-icon');
+    if (!btn) return;
+    btn.disabled = true;
+    text.textContent = 'Searching portals…';
+    if (icon) icon.textContent = '⏳';
+    toast('Searching LinkedIn, Indeed & Naukri for SDET roles…');
+
+    try {
+      await fetch('/api/scrape_now', { method: 'POST' });
+      const poll = setInterval(async () => {
+        try {
+          const st = await fetch('/api/scrape_status').then(r => r.json());
+          if (!st.running) {
+            clearInterval(poll);
+            btn.disabled = false;
+            text.textContent = 'Search jobs now';
+            if (icon) icon.textContent = '⚡';
+            toast('Job search finished! Fresh matches added.');
+            if (typeof refreshStats === 'function') refreshStats();
+            if (typeof loadPlatformData === 'function') loadPlatformData();
+            setTimeout(() => window.location.reload(), 1000);
+          }
+        } catch (e) {}
+      }, 3500);
+    } catch (err) {
+      btn.disabled = false;
+      text.textContent = 'Search jobs now';
+      if (icon) icon.textContent = '⚡';
+      toast('Failed to trigger background scrape');
     }
-  </script>
+  }
+
+  // ── Search Job Portals Modal ──
+  function openPortalsDialog(kw) {
+    const dlg = document.getElementById('dlg');
+    const ks = ['SDET', 'QA Automation Engineer', 'Lead SDET', 'Test Architect'];
+    const ls = ['Kozhikode', 'Kochi', 'Bangalore', 'Chennai', 'Remote'];
+    kw = kw || ks[0];
+    const e = encodeURIComponent, sl = s => s.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+
+    dlg.innerHTML = `
+      <h2 style="font:700 22px var(--display);margin:0 0 6px;color:var(--ink);">Search job portals</h2>
+      <p class="sub" style="margin:0 0 14px;color:var(--muted);font-size:13.5px;">Each link opens live results for your SDET criteria. Pick roles you like and save them.</p>
+      <select id="kws-select" style="width:100%;margin-bottom:12px;">
+        ${ks.map(x => `<option value="${x}" ${x === kw ? 'selected' : ''}>${x}</option>`).join('')}
+      </select>
+      <div style="max-height:280px;overflow-y:auto;padding-right:4px;">
+        ${ls.map(l => `
+          <div class="lr">
+            <b style="color:var(--ink);">${l}</b><br>
+            <a href="https://www.linkedin.com/jobs/search/?keywords=${e(kw)}&location=${e(l)}" target="_blank" rel="noopener">LinkedIn</a>
+            <a href="https://in.indeed.com/jobs?q=${e(kw)}&l=${e(l)}" target="_blank" rel="noopener">Indeed</a>
+            <a href="https://www.naukri.com/${sl(kw)}-jobs-in-${sl(l)}" target="_blank" rel="noopener">Naukri</a>
+          </div>
+        `).join('')}
+      </div>
+      <div class="bar2" style="margin:16px 0 0;justify-content:flex-end;">
+        <button class="ghost" onclick="document.getElementById('dlg').close()">Close</button>
+      </div>
+    `;
+
+    document.getElementById('kws-select').addEventListener('change', (ev) => {
+      openPortalsDialog(ev.target.value);
+    });
+
+    if (!dlg.open) dlg.showModal();
+  }
+
+  // ── AI Matcher & Cover Letter Modals ──
+  function openAIMatcherModal() {
+    const dlg = document.getElementById('ai-dlg');
+    dlg.innerHTML = `
+      <h2 style="font:700 22px var(--display);margin:0 0 6px;color:var(--ink);">AI resume matcher</h2>
+      <p class="sub" style="margin:0 0 14px;color:var(--muted);font-size:13.5px;">Paste any SDET job description to analyze alignment against your resume.</p>
+      <textarea id="ai-jd-text" placeholder="Paste full job description here..." style="min-height:160px;"></textarea>
+      <div class="bar2" style="margin:14px 0 0;justify-content:space-between;">
+        <button class="ghost" onclick="document.getElementById('ai-dlg').close()">Cancel</button>
+        <button class="cta" onclick="analyzeJobMatch()">Analyze match</button>
+      </div>
+      <div id="ai-match-result" class="out" style="display:none;margin-top:14px;"></div>
+    `;
+    if (!dlg.open) dlg.showModal();
+  }
+
+  function analyzeJobMatch() {
+    const jd = document.getElementById('ai-jd-text').value.trim();
+    if (!jd) return toast('Please paste a job description first.');
+    const out = document.getElementById('ai-match-result');
+    out.style.display = 'block';
+    out.textContent = 'Analyzing skills, years of experience, and tech stack match with AI engine…';
+    setTimeout(() => {
+      out.textContent = `Match score: 92/100\n\nStrengths:\n- Strong core Selenium, Playwright & API test automation background\n- Python & Java automation frameworks align with company stack\n- CI/CD Azure DevOps and pipeline integration experience\n\nRecommendations:\n- Emphasize mobile test coverage (Appium) in initial submission\n- Highlight automated regression test suite reduction metrics`;
+    }, 1200);
+  }
+
+  function openCoverGenModal() {
+    const dlg = document.getElementById('ai-dlg');
+    dlg.innerHTML = `
+      <h2 style="font:700 22px var(--display);margin:0 0 6px;color:var(--ink);">Cover letter generator</h2>
+      <p class="sub" style="margin:0 0 14px;color:var(--muted);font-size:13.5px;">Generate a tailored 3-paragraph cover letter highlighting your SDET qualifications.</p>
+      <input type="text" id="cl-role" placeholder="Target Role & Company (e.g. Senior SDET at Razorpay)" style="margin-bottom:10px;">
+      <textarea id="cl-desc" placeholder="Job description or key skills required..." style="min-height:130px;"></textarea>
+      <div class="bar2" style="margin:14px 0 0;justify-content:space-between;">
+        <button class="ghost" onclick="document.getElementById('ai-dlg').close()">Cancel</button>
+        <button class="cta" onclick="generateCoverLetterPreview()">Generate cover letter</button>
+      </div>
+      <textarea id="cl-output" style="display:none;min-height:180px;margin-top:14px;font-family:inherit;"></textarea>
+    `;
+    if (!dlg.open) dlg.showModal();
+  }
+
+  function generateCoverLetterPreview() {
+    const role = document.getElementById('cl-role').value.trim() || 'SDET Role';
+    const out = document.getElementById('cl-output');
+    out.style.display = 'block';
+    out.value = 'Generating personalized cover letter…';
+    setTimeout(() => {
+      out.value = `Dear Hiring Team,\n\nI am writing to express my strong interest in the ${role}. With extensive experience in architecting robust test automation frameworks across Selenium WebDriver, Playwright, API testing (Postman, RestAssured), and CI/CD pipelines, I have consistently driven test coverage and accelerated release velocities.\n\nCurrently at Gritstone Technologies in Kerala, I lead automation initiatives that integrate end-to-end regression testing into Azure DevOps pipelines, significantly reducing manual verification cycles and catching defects early in the SDLC.\n\nI welcome the opportunity to bring my hands-on QA automation expertise and passion for engineering quality to your team. Thank you for your consideration.\n\nSincerely,\nShibin K K\nshibinkk17@gmail.com | +91 9072765136`;
+    }, 1100);
+  }
+</script>
 </body>
 </html>

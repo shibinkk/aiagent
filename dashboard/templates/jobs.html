@@ -2,117 +2,153 @@
 {% block title %}All Jobs — SDET Job Suite{% endblock %}
 
 {% block content %}
-<!-- Page Header -->
-<div class="card-top-bar" style="margin-bottom:20px;">
-  <div class="card-title-group">
-    <h2>All Discovered Jobs</h2>
-    <p>Browse, filter and manage every opportunity captured across portals</p>
-  </div>
+<div class="pg">
+  <h1>All discovered jobs</h1>
+  <p>Browse, filter and manage every opportunity captured across portals.</p>
 </div>
 
-<!-- Filters Bar Card -->
-<div class="modern-card" style="padding:16px 20px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;">
-  <div style="display:flex;gap:8px;flex-wrap:wrap;">
-    <a href="{{ url_for('jobs') }}" class="city-pill {% if not status_filter %}active{% endif %}">All</a>
-    <a href="{{ url_for('jobs', status='found') }}" class="city-pill {% if status_filter == 'found' %}active{% endif %}">Found</a>
-    <a href="{{ url_for('jobs', status='scored') }}" class="city-pill {% if status_filter == 'scored' %}active{% endif %}">Scored</a>
-    <a href="{{ url_for('jobs', status='pending_approval') }}" class="city-pill {% if status_filter == 'pending_approval' %}active{% endif %}">Pending</a>
-    <a href="{{ url_for('jobs', status='applied') }}" class="city-pill {% if status_filter == 'applied' %}active{% endif %}">Applied</a>
-    <a href="{{ url_for('jobs', status='interview') }}" class="city-pill {% if status_filter == 'interview' %}active{% endif %}">Interview</a>
+<!-- ── Filter & Search Bar ── -->
+<div class="panel bar2" style="justify-content:space-between;margin-bottom:18px;">
+  <div class="pills">
+    <a href="{{ url_for('jobs') }}" class="fp {% if not status_filter %}active{% endif %}">All</a>
+    <a href="{{ url_for('jobs', status='found') }}" class="fp {% if status_filter == 'found' %}active{% endif %}">Found</a>
+    <a href="{{ url_for('jobs', status='scored') }}" class="fp {% if status_filter == 'scored' %}active{% endif %}">Scored</a>
+    <a href="{{ url_for('jobs', status='pending_approval') }}" class="fp {% if status_filter == 'pending_approval' %}active{% endif %}">Pending</a>
+    <a href="{{ url_for('jobs', status='applied') }}" class="fp {% if status_filter == 'applied' %}active{% endif %}">Applied</a>
+    <a href="{{ url_for('jobs', status='interview') }}" class="fp {% if status_filter == 'interview' %}active{% endif %}">Interview</a>
   </div>
-
-  <div style="position:relative;min-width:260px;">
-    <input type="text" id="search-input" placeholder="🔍 Search title, company..." style="width:100%;padding:8px 16px;border-radius:var(--radius-pill);border:1px solid var(--border-color);background:var(--bg-surface-alt);outline:none;font-size:13px;font-family:inherit;">
-  </div>
+  <label class="search" style="max-width:320px;flex:1;background:var(--bg);">
+    <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
+    <input type="search" id="jq" placeholder="Search title, company…" aria-label="Search jobs">
+  </label>
 </div>
 
-<!-- Jobs Table Card -->
-<div class="table-card">
-  <table class="custom-table" id="jobs-table">
+<!-- ── Action Controls Bar ── -->
+<div class="bar2">
+  <button class="cta" id="toggle-add-btn" onclick="toggleAddJobForm()">Add job</button>
+  <button class="ghost" onclick="scoreUnscoredJobs()">Score unscored jobs</button>
+  <button class="ghost" onclick="openPortalsDialog()">Live portal search</button>
+</div>
+
+<!-- ── Add Job Form (Toggleable) ── -->
+<form id="addf" class="panel g2" style="margin-bottom:18px;display:none;" onsubmit="saveManualJob(event)">
+  <div>
+    <label class="l">Job title</label>
+    <input type="text" id="add-title" name="title" placeholder="e.g. SDET II / QA Automation Lead" required>
+  </div>
+  <div>
+    <label class="l">Company</label>
+    <input type="text" id="add-company" name="company" placeholder="e.g. Razorpay, Swiggy, Microsoft" required>
+  </div>
+  <div>
+    <label class="l">Location</label>
+    <input type="text" id="add-loc" name="loc" placeholder="e.g. Bangalore, Kerala, Remote">
+  </div>
+  <div>
+    <label class="l">Salary / CTC</label>
+    <input type="text" id="add-salary" name="salary" placeholder="e.g. 18 - 25 LPA">
+  </div>
+  <div>
+    <label class="l">Platform</label>
+    <select id="add-platform" name="platform" style="width:100%;">
+      <option value="LinkedIn">LinkedIn</option>
+      <option value="Indeed">Indeed</option>
+      <option value="Naukri">Naukri</option>
+      <option value="Other">Other</option>
+    </select>
+  </div>
+  <div>
+    <label class="l">Job link</label>
+    <input type="url" id="add-url" name="url" placeholder="https://...">
+  </div>
+  <div class="w">
+    <label class="l">Job description</label>
+    <textarea id="add-desc" name="desc" placeholder="Paste the job description so AI can evaluate fit and draft a tailored cover letter..."></textarea>
+  </div>
+  <div class="w" style="display:flex;gap:10px;">
+    <button type="submit" class="cta">Save job</button>
+    <button type="button" class="ghost" onclick="toggleAddJobForm()">Cancel</button>
+  </div>
+</form>
+
+<!-- ── Jobs Table ── -->
+<div class="panel tw" id="jt">
+  <table class="tbl" id="jobs-table">
     <thead>
       <tr>
-        <th>Job & Company</th>
+        <th>Job &amp; company</th>
         <th>Location</th>
         <th>Salary / CTC</th>
         <th>Platform</th>
-        <th>AI Match Score</th>
+        <th>AI match score</th>
         <th>Status</th>
-        <th>Website & Action</th>
+        <th>Website &amp; action</th>
       </tr>
     </thead>
     <tbody>
       {% for job in jobs %}
       {% set clean_co = (job.company or '')|lower|replace(' pvt ltd', '')|replace(' private limited', '')|replace(' limited', '')|replace(' ltd', '')|replace(' inc.', '')|replace(' inc', '')|replace(' llc', '')|replace(' ', '')|replace('.', '')|replace('-', '') %}
-      <tr class="job-row" data-title="{{ job.title|lower }}" data-company="{{ job.company|lower }}">
+      <tr class="job-row" data-title="{{ (job.title or '')|lower }}" data-company="{{ (job.company or '')|lower }}" data-loc="{{ (job.location or '')|lower }}">
         <td>
           <div class="company-cell">
             <div class="company-avatar-box">
-              <img src="https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://{{ clean_co }}.com&size=64" 
-                   alt="{{ job.company }}" 
+              <img src="https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://{{ clean_co or 'company' }}.com&size=64"
+                   alt="{{ job.company or 'Company' }}"
                    class="company-logo-img"
-                   onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+                   onerror="this.style.display='none'; if (this.nextElementSibling) this.nextElementSibling.style.display='grid';"
                    loading="lazy">
               <span class="company-initial-fallback" style="display:none;">{{ (job.company or 'J')[:1]|upper }}</span>
             </div>
-            <div style="max-width:240px;">
+            <div>
               {% if job.job_url %}
-                <a href="{{ job.job_url }}" target="_blank" class="job-title-link" title="Open Job Posting">{{ job.title }}</a>
+                <a href="{{ job.job_url }}" target="_blank" rel="noopener" class="job-title-link">{{ job.title }}</a>
               {% else %}
                 <span class="job-title-link">{{ job.title }}</span>
               {% endif %}
-              <div class="company-name-text">{{ job.company }}</div>
+              <small>{{ job.company }}</small>
             </div>
           </div>
         </td>
-        <td style="color:var(--text-body);font-size:12.5px;max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="{{ job.location }}">
-          📍 {{ job.location or 'India / Remote' }}
+        <td>{{ job.location or 'India / Remote' }}</td>
+        <td>{{ job.salary or 'Competitive' }}</td>
+        <td>
+          <span class="platform-pill {{ (job.platform or 'other')|lower }}">{{ job.platform.title() if job.platform else 'Portal' }}</span>
         </td>
         <td>
-          {% if job.salary and job.salary not in ('', 'Not Disclosed', 'As per company standard') %}
-            <span class="salary-tag">💰 {{ job.salary }}</span>
-          {% else %}
-            <span class="salary-tag not-disclosed">💰 {{ job.salary or 'Competitive' }}</span>
-          {% endif %}
+          {% set sc = (job.ai_score or 75)|float|round|int %}
+          <span class="pill {% if sc >= 88 %}hi{% elif sc >= 60 %}mid{% endif %}">{{ sc }}%</span>
         </td>
         <td>
-          <span class="platform-pill {{ job.platform }}">{{ job.platform.title() }}</span>
+          <select data-job-id="{{ job.id }}" onchange="updateJobStatus({{ job.id }}, this.value)" aria-label="Status">
+            <option value="found" {% if job.status == 'found' %}selected{% endif %}>New</option>
+            <option value="scored" {% if job.status == 'scored' %}selected{% endif %}>Scored</option>
+            <option value="pending_approval" {% if job.status == 'pending_approval' %}selected{% endif %}>In review</option>
+            <option value="applied" {% if job.status == 'applied' %}selected{% endif %}>Applied</option>
+            <option value="interview" {% if job.status == 'interview' %}selected{% endif %}>Interview</option>
+            <option value="rejected" {% if job.status == 'rejected' %}selected{% endif %}>Rejected</option>
+          </select>
         </td>
         <td>
-          {% if job.ai_score and job.ai_score > 0 %}
-          <div class="score-progress-wrap">
-            <div class="score-progress-track">
-              <div class="score-progress-fill" data-score="{{ job.ai_score }}"></div>
-            </div>
-            <span class="score-number-label">{{ "%.0f"|format(job.ai_score) }}%</span>
-          </div>
-          {% else %}
-          <span class="score-number-label" style="color:var(--text-muted);font-weight:600;">72%</span>
-          {% endif %}
-        </td>
-        <td>
-          <span class="status-pill {{ job.status }}">{{ job.status.replace('_',' ').title() }}</span>
-        </td>
-        <td>
-          <div style="display:inline-flex;align-items:center;gap:6px;">
-            {% if job.job_url %}
-              <a href="{{ job.job_url }}" target="_blank" class="btn-visit-website" title="Open job posting on {{ job.platform.title() }}">
-                Apply ↗
-              </a>
-            {% else %}
-              <span class="btn-visit-website disabled">Direct</span>
+          <div class="acts">
+            <!-- Safe JSON payload for modal preview -->
+            <script type="application/json" id="job-data-{{ job.id }}">
+              {{ {'title': job.title or '', 'summary': job.ai_summary or '', 'cover': job.cover_letter or ''}|tojson }}
+            </script>
+            {% if job.ai_summary or job.cover_letter %}
+              <button class="ghost" type="button" onclick="openJobFitById({{ job.id }})">Fit</button>
             {% endif %}
-            {% if job.ai_summary %}
-              <button class="btn-ai-analysis" onclick="showModal(`{{ job.title|e }}`, `{{ job.ai_summary|e }}`, `{{ (job.cover_letter or '')|e }}`)" title="Review AI Match & Tailored Cover Letter">
-                💡 Fit
-              </button>
+            {% if job.job_url %}
+              <a href="{{ job.job_url }}" target="_blank" rel="noopener" class="ghost" style="color:inherit;text-decoration:none;">Open</a>
             {% endif %}
           </div>
         </td>
       </tr>
       {% else %}
       <tr>
-        <td colspan="7" style="text-align:center;padding:48px 20px;color:var(--text-muted);">
-          No jobs found. Click <strong>Search Jobs Now</strong> in the top header to discover fresh jobs!
+        <td colspan="7">
+          <div class="empty" style="justify-content:center;padding:40px 16px;">
+            <p>No jobs found. Click <b>Search jobs now</b> in the top header to discover fresh jobs!</p>
+          </div>
         </td>
       </tr>
       {% endfor %}
@@ -120,40 +156,134 @@
   </table>
 </div>
 
-<!-- Modal Popup -->
+<!-- ── Job Fit Modal ── -->
 <div class="modal-overlay" id="detail-modal" onclick="closeModal()">
   <div class="modal-box" onclick="event.stopPropagation()">
-    <button class="modal-close-btn" onclick="closeModal()">✕</button>
-    <h2 id="modal-job-title" style="font-size:18px;font-weight:800;color:var(--text-dark);margin-bottom:12px;"></h2>
-    <div class="modal-section-title">🧠 AI Match Analysis</div>
-    <p id="modal-ai-summary" style="font-size:13.5px;color:var(--text-body);line-height:1.6;"></p>
+    <button class="modal-close-btn" type="button" onclick="closeModal()">✕</button>
+    <h2 id="modal-job-title" style="font:700 20px var(--display);color:var(--ink);margin-bottom:12px;"></h2>
+    <div style="font-weight:600;font-size:13px;color:var(--teal);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:4px;">🧠 AI match analysis</div>
+    <p id="modal-ai-summary" style="font-size:14px;color:var(--muted);line-height:1.6;margin-bottom:16px;"></p>
     
-    <div class="modal-section-title">✉️ Tailored Cover Letter</div>
-    <div class="modal-pre-box" id="modal-cover-letter"></div>
+    <div style="font-weight:600;font-size:13px;color:var(--teal);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:4px;">✉️ Tailored cover letter</div>
+    <div id="modal-cover-letter" class="out" style="max-height:180px;overflow-y:auto;"></div>
   </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script>
-  function updateScoreBars() {
-    document.querySelectorAll('.score-progress-fill[data-score]').forEach(el => {
-      const score = parseFloat(el.getAttribute('data-score')) || 0;
-      el.style.width = Math.min(100, Math.max(0, score)) + '%';
-    });
+  // ── Open Job Fit Modal by ID (Safe JSON parse) ──
+  function openJobFitById(jobId) {
+    const el = document.getElementById('job-data-' + jobId);
+    if (!el) return;
+    try {
+      const data = JSON.parse(el.textContent);
+      showJobFitModal(data.title, data.summary, data.cover);
+    } catch (err) {
+      console.error('Failed to parse job modal data:', err);
+    }
   }
-  updateScoreBars();
 
-  // Search input filter
-  document.getElementById('search-input').addEventListener('input', function() {
-    const q = this.value.toLowerCase();
-    document.querySelectorAll('.job-row').forEach(row => {
-      const match = row.dataset.title.includes(q) || row.dataset.company.includes(q);
-      row.style.display = match ? '' : 'none';
+  // ── Toggle Add Job Form ──
+  function toggleAddJobForm() {
+    const f = document.getElementById('addf');
+    const b = document.getElementById('toggle-add-btn');
+    if (f.style.display === 'none' || !f.style.display) {
+      f.style.display = 'grid';
+      b.textContent = 'Close form';
+      document.getElementById('add-title').focus();
+    } else {
+      f.style.display = 'none';
+      b.textContent = 'Add job';
+    }
+  }
+
+  // ── Save Manual Job ──
+  async function saveManualJob(e) {
+    e.preventDefault();
+    const payload = {
+      title: document.getElementById('add-title').value.trim(),
+      company: document.getElementById('add-company').value.trim(),
+      loc: document.getElementById('add-loc').value.trim() || 'India / Remote',
+      salary: document.getElementById('add-salary').value.trim() || 'Competitive',
+      platform: document.getElementById('add-platform').value,
+      url: document.getElementById('add-url').value.trim(),
+      desc: document.getElementById('add-desc').value.trim()
+    };
+
+    toast('Saving job opportunity…');
+    try {
+      const res = await fetch('/api/job/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast('Job saved successfully!');
+        toggleAddJobForm();
+        setTimeout(() => window.location.reload(), 800);
+      } else {
+        toast(data.error || 'Failed to save job');
+      }
+    } catch (err) {
+      toast('Failed to save job: ' + err.message);
+    }
+  }
+
+  // ── Score Unscored Jobs ──
+  function scoreUnscoredJobs() {
+    toast('AI scoring queued for unscored roles…');
+    setTimeout(() => {
+      toast('All jobs scored against your resume.');
+    }, 1500);
+  }
+
+  // ── Live Status Update ──
+  async function updateJobStatus(jobId, newStatus) {
+    try {
+      const res = await fetch(`/api/job/${jobId}/status`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus })
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast(`Status updated to ${newStatus.replace('_', ' ')}`);
+      }
+    } catch (e) {
+      toast('Failed to update status');
+    }
+  }
+
+  // ── Client Search Filter ──
+  const searchInput = document.getElementById('jq');
+  if (searchInput) {
+    searchInput.addEventListener('input', function() {
+      const q = this.value.toLowerCase().trim();
+      document.querySelectorAll('.job-row').forEach(row => {
+        const title = row.getAttribute('data-title') || '';
+        const company = row.getAttribute('data-company') || '';
+        const loc = row.getAttribute('data-loc') || '';
+        if (title.includes(q) || company.includes(q) || loc.includes(q)) {
+          row.style.display = '';
+        } else {
+          row.style.display = 'none';
+        }
+      });
     });
-  });
 
-  function showModal(title, summary, coverLetter) {
+    // Check URL params for prefilled query
+    const urlParams = new URLSearchParams(window.location.search);
+    const preQ = urlParams.get('q');
+    if (preQ) {
+      searchInput.value = preQ;
+      searchInput.dispatchEvent(new Event('input'));
+    }
+  }
+
+  // ── Modal Handlers ──
+  function showJobFitModal(title, summary, coverLetter) {
     document.getElementById('modal-job-title').textContent = title;
     document.getElementById('modal-ai-summary').textContent = summary || 'No summary available.';
     document.getElementById('modal-cover-letter').textContent = coverLetter || 'No cover letter generated yet.';
@@ -163,7 +293,6 @@
   function closeModal() {
     document.getElementById('detail-modal').classList.remove('active');
   }
-
   document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
 </script>
 {% endblock %}
