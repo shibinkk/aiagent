@@ -30,7 +30,7 @@
           {{ {'title': job.title or '', 'summary': job.ai_summary or '', 'cover': job.cover_letter or ''}|tojson }}
         </script>
         {% if job.cover_letter or job.ai_summary %}
-          <button class="ghost" type="button" onclick="openJobFitById({{ job.queue_id }})">
+          <button class="ghost" type="button" data-job-id="{{ job.queue_id }}" onclick="openJobFitById(this.dataset.jobId)">
             Cover letter
           </button>
         {% endif %}
@@ -39,7 +39,8 @@
         </a>
         <a href="{{ url_for('approve', queue_id=job.queue_id) }}" 
            class="cta" 
-           {% if job.job_url %}onclick="window.open('{{ job.job_url }}', '_blank', 'noopener');"{% endif %} 
+           data-url="{{ job.job_url }}"
+           onclick="if (this.dataset.url) window.open(this.dataset.url, '_blank', 'noopener');" 
            style="text-decoration:none;">
           Approve &amp; apply
         </a>

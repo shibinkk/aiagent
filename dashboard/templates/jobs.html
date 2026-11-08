@@ -119,7 +119,7 @@
           <span class="pill {% if sc >= 88 %}hi{% elif sc >= 60 %}mid{% endif %}">{{ sc }}%</span>
         </td>
         <td>
-          <select data-job-id="{{ job.id }}" onchange="updateJobStatus({{ job.id }}, this.value)" aria-label="Status">
+          <select data-job-id="{{ job.id }}" onchange="updateJobStatus(this.dataset.jobId, this.value)" aria-label="Status">
             <option value="found" {% if job.status == 'found' %}selected{% endif %}>New</option>
             <option value="scored" {% if job.status == 'scored' %}selected{% endif %}>Scored</option>
             <option value="pending_approval" {% if job.status == 'pending_approval' %}selected{% endif %}>In review</option>
@@ -135,7 +135,7 @@
               {{ {'title': job.title or '', 'summary': job.ai_summary or '', 'cover': job.cover_letter or ''}|tojson }}
             </script>
             {% if job.ai_summary or job.cover_letter %}
-              <button class="ghost" type="button" onclick="openJobFitById({{ job.id }})">Fit</button>
+              <button class="ghost" type="button" data-job-id="{{ job.id }}" onclick="openJobFitById(this.dataset.jobId)">Fit</button>
             {% endif %}
             {% if job.job_url %}
               <a href="{{ job.job_url }}" target="_blank" rel="noopener" class="ghost" style="color:inherit;text-decoration:none;">Open</a>
