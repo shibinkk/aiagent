@@ -6,7 +6,7 @@ Flask web dashboard for the AI Job Search Agent — SDET Job Suite.
 import os
 import sys
 import threading
-import yaml
+import yaml  # type: ignore
 from pathlib import Path
 
 # Ensure project root is on path
@@ -74,11 +74,15 @@ def _run_bg_scrape(quick: bool = True):
         # For quick scrape: target top 2 roles & top 2 locations for fast response
         scrape_cfg = dict(config)
         if quick:
-            scrape_cfg["job_search"] = dict(config.get("job_search", {}))
-            roles = config.get("job_search", {}).get("roles", ["SDET", "QA Automation Engineer"])
-            locs = config.get("job_search", {}).get("locations", ["Kochi", "Bangalore"])
-            scrape_cfg["job_search"]["roles"] = roles[:2]
-            scrape_cfg["job_search"]["locations"] = locs[:2]
+            raw_js = config.get("job_search")
+            job_search = dict(raw_js) if isinstance(raw_js, dict) else {}
+            scrape_cfg["job_search"] = job_search
+
+            roles = job_search.get("roles", ["SDET", "QA Automation Engineer"])
+            locs = job_search.get("locations", ["Kochi", "Bangalore"])
+
+            scrape_cfg["job_search"]["roles"] = roles[:2] if isinstance(roles, list) else ["SDET", "QA Automation Engineer"]
+            scrape_cfg["job_search"]["locations"] = locs[:2] if isinstance(locs, list) else ["Kochi", "Bangalore"]
             scrape_cfg["job_search"]["results_per_platform"] = 10
 
         raw_jobs = scrape_all_platforms(scrape_cfg)

@@ -241,7 +241,7 @@ def update_job_status(job_id: int, status: str):
     conn.close()
 
 
-def get_jobs(status: str = None, limit: int = 200) -> list[dict]:
+def get_jobs(status: str | None = None, limit: int = 200) -> list[dict]:
     try:
         conn = get_connection()
         if status:
