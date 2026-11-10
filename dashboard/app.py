@@ -15,7 +15,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 from flask import Flask, render_template, jsonify, request, redirect, url_for
 from tracker.database import (
     init_db,
-    get_jobs, get_stats_summary, get_pending_approvals,
+    get_jobs, get_job_by_id, get_stats_summary, get_pending_approvals,
     update_job_status, approve_job, reject_job, get_daily_stats,
     get_monthly_activity, insert_job, increment_stat,
     clean_and_backfill_jobs
@@ -53,12 +53,15 @@ def _run_bg_scrape(quick: bool = True):
     Runs job scraping in the background.
     If quick=True (button click): searches top priority roles & locations with lower count
     so it finishes in ~10-15 seconds rather than minutes.
+    If quick=False (scheduled auto-find): searches top roles and locations, saves new jobs,
+    scores them, sends Telegram alerts for matches, and queues high matches for approval.
     """
     global _scraping_in_progress
     try:
         from scraper import scrape_all_platforms
         from filter import filter_jobs
         from notifier.telegram_bot import send_job_alert
+        from tracker.database import add_to_approval_queue
 
         config = _get_config()
         if not config:
@@ -71,25 +74,34 @@ def _run_bg_scrape(quick: bool = True):
                 "platforms": {"linkedin": True, "indeed": True, "glassdoor": False, "naukri": False, "internshala": False}
             }
 
-        # For quick scrape: target top 2 roles & top 2 locations for fast response
         scrape_cfg = dict(config)
+        raw_js = config.get("job_search")
+        job_search = dict(raw_js) if isinstance(raw_js, dict) else {}
+        scrape_cfg["job_search"] = job_search
+
+        roles = job_search.get("roles", ["SDET", "QA Automation Engineer"])
+        locs = job_search.get("locations", ["Kochi", "Bangalore"])
+
         if quick:
-            raw_js = config.get("job_search")
-            job_search = dict(raw_js) if isinstance(raw_js, dict) else {}
-            scrape_cfg["job_search"] = job_search
-
-            roles = job_search.get("roles", ["SDET", "QA Automation Engineer"])
-            locs = job_search.get("locations", ["Kochi", "Bangalore"])
-
             scrape_cfg["job_search"]["roles"] = roles[:2] if isinstance(roles, list) else ["SDET", "QA Automation Engineer"]  # type: ignore[index]
             scrape_cfg["job_search"]["locations"] = locs[:2] if isinstance(locs, list) else ["Kochi", "Bangalore"]  # type: ignore[index]
             scrape_cfg["job_search"]["results_per_platform"] = 10
+        else:
+            # Scheduled background scrape: limit to top 3 roles & top 3 locations so it finishes in ~35s
+            scrape_cfg["job_search"]["roles"] = roles[:3] if isinstance(roles, list) else ["SDET", "QA Automation Engineer"]  # type: ignore[index]
+            scrape_cfg["job_search"]["locations"] = locs[:3] if isinstance(locs, list) else ["Kochi", "Bangalore"]  # type: ignore[index]
+            scrape_cfg["job_search"]["results_per_platform"] = 15
 
         raw_jobs = scrape_all_platforms(scrape_cfg)
         filtered = filter_jobs(raw_jobs, scrape_cfg)
 
         from ai_engine.scorer import score_job
         from ai_engine.cover_letter import generate_cover_letter
+
+        threshold = int(config.get("ai", {}).get("score_threshold", 65))
+        require_approval = config.get("apply", {}).get("require_approval", True)
+        auto_apply = config.get("apply", {}).get("auto_apply", False)
+        notify_telegram = config.get("notifications", {}).get("telegram", True)
 
         for job in filtered:
             # Score job using AI engine
@@ -106,13 +118,26 @@ def _run_bg_scrape(quick: bool = True):
                 increment_stat("jobs_found")
                 increment_stat("jobs_scored")
                 job["id"] = job_id
-                # Send instant alert to Telegram for high-matching jobs (>= 75%)
-                if (job.get("ai_score") or 0) >= 75:
+                score = job.get("ai_score") or 0
+
+                # Queue high match for review / approval
+                if score >= 88 or (score >= threshold and require_approval):
+                    try:
+                        add_to_approval_queue(job_id)
+                        update_job_status(job_id, "pending_approval")
+                    except Exception as qe:
+                        print(f"Approval queue error: {qe}")
+
+                # Auto-apply if enabled in config
+                if auto_apply and score >= threshold:
+                    _trigger_apply_async(job_id)
+
+                # Send instant alert to Telegram for matching jobs
+                if notify_telegram and score >= threshold:
                     try:
                         send_job_alert(job)
                     except Exception as ex:
                         print(f"Telegram alert error: {ex}")
-
 
     except Exception as e:
         print(f"Background scrape error: {e}")
@@ -120,20 +145,35 @@ def _run_bg_scrape(quick: bool = True):
         _scraping_in_progress = False
 
 
-# ── Background Automated Scheduler (Runs every 4 hours automatically) ────────
+# ── Background Automated Scheduler (Runs periodically & on startup) ─────────
 try:
     from apscheduler.schedulers.background import BackgroundScheduler
+    from datetime import datetime, timedelta
     scheduler = BackgroundScheduler(daemon=True)
-    # Automatically scrape and update Telegram every 4 hours
+
+    _cfg = _get_config()
+    _interval_hours = int(_cfg.get("scheduler", {}).get("scrape_interval_hours", 2))
+
+    # Automatically scrape and update Telegram: first scan 20s after launch, then every N hours
     scheduler.add_job(
         func=lambda: _run_bg_scrape(quick=False),
         trigger="interval",
-        hours=4,
-        id="scheduled_job_scrape"
+        hours=_interval_hours,
+        next_run_time=datetime.now() + timedelta(seconds=20),
+        id="scheduled_job_scrape",
+        replace_existing=True
     )
     scheduler.start()
+    print(f"Background scheduler started: first check in 20s, repeating every {_interval_hours}h.")
 except Exception as e:
     print(f"Could not start background scheduler: {e}")
+
+# ── Start Telegram polling (listens for inline Apply button callbacks) ────────
+try:
+    from notifier.telegram_bot import start_polling as _start_tg_polling
+    _start_tg_polling()
+except Exception as _tg_err:
+    print(f"Telegram polling skipped: {_tg_err}")
 
 
 @app.context_processor
@@ -218,8 +258,69 @@ def resume_page():
 
 @app.route("/approve/<int:queue_id>")
 def approve(queue_id: int):
+    """Mark approved in DB, then trigger auto-apply in background if job is on LinkedIn."""
     approve_job(queue_id)
+    # Find the job linked to this queue entry and try to auto-apply
+    try:
+        from tracker.database import get_pending_approvals as _get_pending
+        # Get the job_id from approval_queue before approving wipes pending status
+        import sqlite3 as _sq
+        from tracker.database import get_connection as _gc
+        conn = _gc()
+        row = conn.execute(
+            "SELECT job_id FROM approval_queue WHERE id=?", (queue_id,)
+        ).fetchone()
+        conn.close()
+        if row:
+            _trigger_apply_async(row["job_id"])
+    except Exception as ex:
+        print(f"Auto-apply trigger error: {ex}")
     return redirect(url_for("approvals"))
+
+
+def _trigger_apply_async(job_id: int):
+    """
+    Fire-and-forget: runs apply_to_job() in a daemon thread.
+    Updates job status to 'applied' on success, sends Telegram confirmation.
+    """
+    def _do_apply():
+        try:
+            job = get_job_by_id(job_id)
+            if not job:
+                return
+            from applicator.linkedin_apply import apply_to_job
+            resume_path = os.path.abspath(
+                os.path.join(os.path.dirname(__file__), "..", "resume", "resume.pdf")
+            )
+            cover_letter = job.get("cover_letter") or ""
+            if not cover_letter:
+                try:
+                    from ai_engine.cover_letter import generate_cover_letter
+                    cover_letter = generate_cover_letter(None, "", job)
+                except Exception:
+                    cover_letter = ""
+
+            success = apply_to_job(
+                job,
+                resume_path=resume_path,
+                cover_letter=cover_letter,
+            )
+            if success:
+                update_job_status(job_id, "applied")
+                increment_stat("jobs_applied")
+                try:
+                    from notifier.telegram_bot import send_applied_notification
+                    send_applied_notification(job)
+                except Exception:
+                    pass
+                print(f"[Auto-Apply] ✅ Applied to {job.get('title')} @ {job.get('company')}")
+            else:
+                print(f"[Auto-Apply] ⚠️ Could not auto-apply to {job.get('title')} — not LinkedIn Easy Apply or login failed.")
+        except Exception as e:
+            print(f"[Auto-Apply] Error: {e}")
+
+    t = threading.Thread(target=_do_apply, daemon=True)
+    t.start()
 
 
 @app.route("/reject/<int:queue_id>")
@@ -279,6 +380,32 @@ def update_status(job_id: int):
         update_job_status(job_id, new_status)
         return jsonify({"success": True})
     return jsonify({"error": "No status provided"}), 400
+
+
+@app.route("/api/job/<int:job_id>/apply", methods=["POST"])
+def api_apply_job(job_id: int):
+    """
+    Trigger auto-apply for a specific job via the dashboard.
+    Returns immediately; apply runs in a background thread.
+    """
+    job = get_job_by_id(job_id)
+    if not job:
+        return jsonify({"error": "Job not found"}), 404
+
+    platform = (job.get("platform") or "").lower()
+    job_url = job.get("job_url", "")
+
+    if "linkedin" not in platform and "linkedin.com" not in job_url:
+        return jsonify({
+            "status": "skipped",
+            "message": "Auto-apply only supports LinkedIn Easy Apply jobs. Open the job link to apply manually."
+        }), 200
+
+    _trigger_apply_async(job_id)
+    return jsonify({
+        "status": "started",
+        "message": f"Applying to {job.get('title')} @ {job.get('company')} — Chrome will open automatically."
+    })
 
 
 @app.route("/api/scrape_now", methods=["POST", "GET"])

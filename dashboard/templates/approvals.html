@@ -37,13 +37,15 @@
         <a href="{{ url_for('reject', queue_id=job.queue_id) }}" class="ghost" style="color:var(--accent);text-decoration:none;">
           Reject
         </a>
-        <a href="{{ url_for('approve', queue_id=job.queue_id) }}" 
-           class="cta" 
-           data-url="{{ job.job_url }}"
-           onclick="if (this.dataset.url) window.open(this.dataset.url, '_blank', 'noopener');" 
-           style="text-decoration:none;">
-          Approve &amp; apply
-        </a>
+        <button class="ghost"
+                type="button"
+                data-job-id="{{ job.id }}"
+                data-queue-id="{{ job.queue_id }}"
+                data-url="{{ job.job_url }}"
+                onclick="handleApproveApply(event)"
+                style="color:var(--ok, #16a34a);border-color:var(--ok, #16a34a);">
+          Approve &amp; Apply
+        </button>
       </div>
     </div>
     {% endfor %}
@@ -77,6 +79,48 @@
   function handleCoverBtn(evt) {
     var id = evt.currentTarget.getAttribute('data-job-id');
     openJobFitById(id);
+  }
+
+  async function handleApproveApply(evt) {
+    var btn = evt.currentTarget;
+    var jobId = btn.getAttribute('data-job-id');
+    var queueId = btn.getAttribute('data-queue-id');
+    var jobUrl = btn.getAttribute('data-url');
+
+    // Open job link in new tab immediately so user can monitor
+    if (jobUrl) {
+      window.open(jobUrl, '_blank', 'noopener');
+    }
+
+    // Trigger server-side approve + auto-apply
+    btn.disabled = true;
+    btn.textContent = 'Applying…';
+
+    try {
+      // 1. Mark as approved in DB
+      await fetch('/approve/' + queueId, { method: 'GET' });
+
+      // 2. Fire auto-apply via API
+      var res = await fetch('/api/job/' + jobId + '/apply', { method: 'POST' });
+      var data = await res.json();
+
+      if (data.status === 'started') {
+        toast('✅ ' + data.message);
+        btn.textContent = 'Applying…';
+      } else if (data.status === 'skipped') {
+        toast('ℹ️ ' + data.message);
+        btn.textContent = 'Approved';
+      } else {
+        toast('❌ ' + (data.message || 'Apply failed'));
+        btn.textContent = 'Approved';
+      }
+    } catch (e) {
+      toast('Error triggering apply: ' + e);
+      btn.textContent = 'Approved';
+    }
+
+    // Reload after 3 seconds to reflect the status change
+    setTimeout(function() { window.location.reload(); }, 3000);
   }
 
   function openJobFitById(id) {

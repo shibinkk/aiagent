@@ -83,22 +83,24 @@ def run_job_cycle(config: dict, ai_client: OllamaClient, resume_text: str):
         score = result["score"]
         summary = result.get("summary", "")
 
+        cover_letter = ""
+        if score >= threshold:
+            cover_letter = generate_cover_letter(
+                ai_client, resume_text, job,
+                max_words=config["ai"].get("cover_letter_max_words", 300)
+            )
 
-            cover_letter = ""
-            if score >= threshold:
-                cover_letter = generate_cover_letter(
-                    ai_client, resume_text, job,
-                    max_words=config["ai"].get("cover_letter_max_words", 300)
-                )
+        update_job_ai(job["_id"], score, summary, cover_letter)
+        increment_stat("jobs_scored")
 
-            update_job_ai(job["_id"], score, summary, cover_letter)
-            increment_stat("jobs_scored")
-
-            # Instant notification for high-score jobs
-            if score >= threshold and notify_cfg.get("notify_on_new_match", True):
-                job["ai_score"] = score
-                job["ai_summary"] = summary
-                send_job_alert(job)
+        # Instant notification for high-score jobs
+        if score >= threshold and notify_cfg.get("notify_on_new_match", True):
+            job["ai_score"] = score
+            job["ai_summary"] = summary
+            # Ensure "id" key is set so Telegram Apply callback can find the job
+            if "_id" in job and "id" not in job:
+                job["id"] = job["_id"]
+            send_job_alert(job)
 
     # ── 5. Auto-apply ────────────────────────────────────────────────────────
     if config.get("apply", {}).get("auto_apply") or config.get("apply", {}).get("require_approval"):

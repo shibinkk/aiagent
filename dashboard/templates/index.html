@@ -207,13 +207,27 @@
           <div class="acts">
             <!-- Safe JSON payload for modal preview -->
             <script type="application/json" id="job-data-{{ job.id }}">
-              {{ {'title': job.title or '', 'summary': job.ai_summary or '', 'cover': job.cover_letter or ''}|tojson }}
+              {{ {'id': job.id, 'title': job.title or '', 'summary': job.ai_summary or '', 'cover': job.cover_letter or '', 'url': job.job_url or '', 'platform': job.platform or ''}|tojson }}
             </script>
             {% if job.ai_summary or job.cover_letter %}
               <button class="ghost" type="button" data-job-id="{{ job.id }}" onclick="handleFitBtn(event)">Fit</button>
             {% endif %}
             {% if job.job_url %}
               <a href="{{ job.job_url }}" target="_blank" rel="noopener" class="ghost" style="color:inherit;text-decoration:none;">Open</a>
+            {% endif %}
+            {% if job.status != 'applied' %}
+              <button class="cta apply-btn-{{ job.id }}" 
+                      type="button" 
+                      data-job-id="{{ job.id }}" 
+                      data-url="{{ job.job_url or '' }}" 
+                      data-title="{{ job.title or '' }}" 
+                      data-company="{{ job.company or '' }}" 
+                      onclick="triggerJobApply(event)" 
+                      style="padding:6px 14px;font-size:12.5px;text-decoration:none;">
+                Apply
+              </button>
+            {% else %}
+              <span class="pill ok" style="font-size:12px;padding:4px 10px;">Applied ✓</span>
             {% endif %}
           </div>
         </td>
@@ -241,6 +255,11 @@
     
     <div style="font-weight:600;font-size:13px;color:var(--teal);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:4px;">✉️ Tailored cover letter</div>
     <div id="modal-cover-letter" class="out" style="max-height:180px;overflow-y:auto;"></div>
+
+    <div style="margin-top:20px;display:flex;justify-content:flex-end;gap:10px;">
+      <button class="ghost" type="button" onclick="closeModal()">Close</button>
+      <button id="modal-apply-btn" class="cta" type="button" onclick="applyFromModal()">Apply Now</button>
+    </div>
   </div>
 </div>
 {% endblock %}
@@ -250,6 +269,7 @@
   let autoAgentActive = true;
   let currentRange = 'w';
   let activityChart = null;
+  let activeModalJob = null;
 
   // ── Event handler helpers (avoid inline this.dataset in onclick) ──
   function handleStatusChange(evt) {
@@ -267,8 +287,74 @@
     if (!el) return;
     try {
       const data = JSON.parse(el.textContent);
+      activeModalJob = data;
       showJobFitModal(data.title, data.summary, data.cover);
     } catch (err) {
+      console.error('Failed to parse job modal data:', err);
+    }
+  }
+
+  async function applyFromModal() {
+    if (!activeModalJob || !activeModalJob.id) return;
+    closeModal();
+    executeJobApply(activeModalJob.id, activeModalJob.url, activeModalJob.title, '');
+  }
+
+  async function triggerJobApply(evt) {
+    const btn = evt.currentTarget;
+    const jobId = btn.getAttribute('data-job-id');
+    const url = btn.getAttribute('data-url') || '';
+    const title = btn.getAttribute('data-title') || '';
+    const company = btn.getAttribute('data-company') || '';
+    executeJobApply(jobId, url, title, company, btn);
+  }
+
+  async function executeJobApply(jobId, url, title, company, targetBtn) {
+    const btns = document.querySelectorAll('.apply-btn-' + jobId);
+    btns.forEach(b => {
+      b.disabled = true;
+      b.textContent = 'Applying…';
+    });
+
+    if (url) {
+      window.open(url, '_blank', 'noopener');
+    }
+
+    toast('Initiating auto-apply for ' + (title || 'role') + '…');
+
+    try {
+      const res = await fetch('/api/job/' + jobId + '/apply', { method: 'POST' });
+      const data = await res.json();
+
+      if (data.status === 'started') {
+        toast('✅ ' + data.message);
+        btns.forEach(b => {
+          b.outerHTML = '<span class="pill ok" style="font-size:12px;padding:4px 10px;">Applied ✓</span>';
+        });
+        const sel = document.querySelector('select[data-job-id="' + jobId + '"]');
+        if (sel) sel.value = 'applied';
+        refreshStats();
+      } else if (data.status === 'skipped') {
+        toast('ℹ️ ' + data.message);
+        btns.forEach(b => {
+          b.disabled = false;
+          b.textContent = 'Apply';
+        });
+      } else {
+        toast('❌ ' + (data.message || data.error || 'Apply failed'));
+        btns.forEach(b => {
+          b.disabled = false;
+          b.textContent = 'Apply';
+        });
+      }
+    } catch (err) {
+      toast('Failed to apply: ' + err.message);
+      btns.forEach(b => {
+        b.disabled = false;
+        b.textContent = 'Apply';
+      });
+    }
+  }
       console.error('Failed to parse job modal data:', err);
     }
   }

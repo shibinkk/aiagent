@@ -51,7 +51,7 @@ platforms:
   internshala: true
 
 scheduler:
-  scrape_interval_hours: 6
+  scrape_interval_hours: 2
   daily_summary_time: "08:00"
   timezone: "Asia/Kolkata"
 

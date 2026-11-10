@@ -263,6 +263,20 @@ def get_jobs(status: str | None = None, limit: int = 200) -> list[dict]:
         return []
 
 
+def get_job_by_id(job_id: int) -> dict | None:
+    """Fetch a single job row by its primary key."""
+    try:
+        conn = get_connection()
+        row = conn.execute(
+            "SELECT * FROM jobs WHERE id=?", (job_id,)
+        ).fetchone()
+        conn.close()
+        return dict(row) if row else None
+    except Exception as e:
+        logger.warning(f"Error fetching job {job_id}: {e}")
+        return None
+
+
 def get_pending_approvals() -> list[dict]:
     try:
         conn = get_connection()
