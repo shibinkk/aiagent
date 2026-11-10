@@ -161,7 +161,6 @@ def _handle_apply_callback(token: str, chat_id: str,
 
             from tracker.database import get_job_by_id, update_job_status, increment_stat
             from applicator.linkedin_apply import apply_to_job
-            from notifier.telegram_bot import send_message as _send
 
             job = get_job_by_id(job_id)
             if not job:
