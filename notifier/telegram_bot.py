@@ -5,6 +5,7 @@ Also runs a background polling loop to handle Apply callbacks.
 """
 
 import os
+import html
 import threading
 import time
 import requests
@@ -94,12 +95,12 @@ def send_job_alert(job: dict) -> bool:
     Includes an inline [✅ Apply Now] button that triggers auto-apply when tapped.
     """
     score = job.get("ai_score", 0)
-    title = job.get("title", "Unknown")
-    company = job.get("company", "Unknown")
-    location = job.get("location", "")
-    platform = job.get("platform", "")
+    title = html.escape(str(job.get("title") or "Unknown"))
+    company = html.escape(str(job.get("company") or "Unknown"))
+    location = html.escape(str(job.get("location") or ""))
+    platform = str(job.get("platform") or "")
     url = job.get("job_url", "")
-    summary = job.get("ai_summary", "")
+    summary = html.escape(str(job.get("ai_summary") or ""))
     job_id = job.get("id", 0)
 
     emoji = "🔥" if score >= 85 else "✅" if score >= 70 else "📋"
