@@ -474,6 +474,12 @@ h1 {
   position: relative;
 }
 
+/* Pipeline stat color modifiers — replaces inline style="--c:var(...)" */
+.st--accent { --c: var(--accent); }
+.st--sky    { --c: var(--sky); }
+.st--amber  { --c: var(--amber); }
+.st--teal   { --c: var(--teal); }
+
 .st::after {
   content: "";
   position: absolute;

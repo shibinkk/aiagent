@@ -1,3 +1,5 @@
+python-interpreter-path = "C:/Users/shibi/AppData/Local/Programs/Python/Python313/python.exe"
+
 search-path = [
     ".",
     "dashboard",
@@ -10,7 +12,7 @@ search-path = [
     "applicator"
 ]
 
-site-package-path = [
+site-packages-path = [
     "C:/Users/shibi/AppData/Local/Programs/Python/Python313/Lib/site-packages"
 ]
 

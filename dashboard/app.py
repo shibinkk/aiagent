@@ -81,8 +81,8 @@ def _run_bg_scrape(quick: bool = True):
             roles = job_search.get("roles", ["SDET", "QA Automation Engineer"])
             locs = job_search.get("locations", ["Kochi", "Bangalore"])
 
-            scrape_cfg["job_search"]["roles"] = roles[:2] if isinstance(roles, list) else ["SDET", "QA Automation Engineer"]
-            scrape_cfg["job_search"]["locations"] = locs[:2] if isinstance(locs, list) else ["Kochi", "Bangalore"]
+            scrape_cfg["job_search"]["roles"] = roles[:2] if isinstance(roles, list) else ["SDET", "QA Automation Engineer"]  # type: ignore[index]
+            scrape_cfg["job_search"]["locations"] = locs[:2] if isinstance(locs, list) else ["Kochi", "Bangalore"]  # type: ignore[index]
             scrape_cfg["job_search"]["results_per_platform"] = 10
 
         raw_jobs = scrape_all_platforms(scrape_cfg)

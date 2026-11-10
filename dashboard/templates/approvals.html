@@ -30,7 +30,7 @@
           {{ {'title': job.title or '', 'summary': job.ai_summary or '', 'cover': job.cover_letter or ''}|tojson }}
         </script>
         {% if job.cover_letter or job.ai_summary %}
-          <button class="ghost" type="button" data-job-id="{{ job.queue_id }}" onclick="openJobFitById(this.dataset.jobId)">
+          <button class="ghost" type="button" data-job-id="{{ job.queue_id }}" onclick="handleCoverBtn(event)">
             Cover letter
           </button>
         {% endif %}
@@ -74,6 +74,11 @@
 
 {% block scripts %}
 <script>
+  function handleCoverBtn(evt) {
+    var id = evt.currentTarget.getAttribute('data-job-id');
+    openJobFitById(id);
+  }
+
   function openJobFitById(id) {
     const el = document.getElementById('job-data-' + id);
     if (!el) return;

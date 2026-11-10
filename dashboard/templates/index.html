@@ -25,22 +25,22 @@
 {% set interview_pct = [((stats.get('interview', 0) / denom) * 100)|float|round|int, 100]|min %}
 
 <section class="pipe">
-  <div class="st" style="--c:var(--accent)">
+  <div class="st st--accent">
     <small>Discovered</small>
     <strong id="stat-found">{{ found_count }}</strong>
     <div class="bar"><i id="bar-found" style="width:100%"></i></div>
   </div>
-  <div class="st" style="--c:var(--sky)">
+  <div class="st st--sky">
     <small>AI scored</small>
     <strong id="stat-scored">{{ stats.get('scored', 0) }}</strong>
     <div class="bar"><i id="bar-scored" data-pct="{{ scored_pct }}" style="width: 0%;"></i></div>
   </div>
-  <div class="st" style="--c:var(--amber)">
+  <div class="st st--amber">
     <small>Applied</small>
     <strong id="stat-applied">{{ stats.get('applied', 0) }}</strong>
     <div class="bar"><i id="bar-applied" data-pct="{{ applied_pct }}" style="width: 0%;"></i></div>
   </div>
-  <div class="st" style="--c:var(--teal)">
+  <div class="st st--teal">
     <small>Interviews</small>
     <strong id="stat-interview">{{ stats.get('interview', 0) }}</strong>
     <div class="bar"><i id="bar-interview" data-pct="{{ interview_pct }}" style="width: 0%;"></i></div>
@@ -194,7 +194,7 @@
           <span class="pill {% if sc >= 88 %}hi{% elif sc >= 60 %}mid{% endif %}">{{ sc }}%</span>
         </td>
         <td>
-          <select data-job-id="{{ job.id }}" onchange="updateJobStatus(this.dataset.jobId, this.value)" aria-label="Status">
+          <select data-job-id="{{ job.id }}" onchange="handleStatusChange(event)" aria-label="Status">
             <option value="found" {% if job.status == 'found' %}selected{% endif %}>New</option>
             <option value="scored" {% if job.status == 'scored' %}selected{% endif %}>Scored</option>
             <option value="pending_approval" {% if job.status == 'pending_approval' %}selected{% endif %}>In review</option>
@@ -210,7 +210,7 @@
               {{ {'title': job.title or '', 'summary': job.ai_summary or '', 'cover': job.cover_letter or ''}|tojson }}
             </script>
             {% if job.ai_summary or job.cover_letter %}
-              <button class="ghost" type="button" data-job-id="{{ job.id }}" onclick="openJobFitById(this.dataset.jobId)">Fit</button>
+              <button class="ghost" type="button" data-job-id="{{ job.id }}" onclick="handleFitBtn(event)">Fit</button>
             {% endif %}
             {% if job.job_url %}
               <a href="{{ job.job_url }}" target="_blank" rel="noopener" class="ghost" style="color:inherit;text-decoration:none;">Open</a>
@@ -250,6 +250,16 @@
   let autoAgentActive = true;
   let currentRange = 'w';
   let activityChart = null;
+
+  // ── Event handler helpers (avoid inline this.dataset in onclick) ──
+  function handleStatusChange(evt) {
+    var el = evt.currentTarget;
+    updateJobStatus(el.getAttribute('data-job-id'), el.value);
+  }
+
+  function handleFitBtn(evt) {
+    openJobFitById(evt.currentTarget.getAttribute('data-job-id'));
+  }
 
   // ── Open Job Fit Modal by ID (Safe JSON parse) ──
   function openJobFitById(jobId) {
