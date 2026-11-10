@@ -103,6 +103,9 @@ def _run_bg_scrape(quick: bool = True):
         auto_apply = config.get("apply", {}).get("auto_apply", False)
         notify_telegram = config.get("notifications", {}).get("telegram", True)
 
+        new_jobs = []
+        new_high_matches = []
+
         for job in filtered:
             # Score job using AI engine
             try:
@@ -119,6 +122,7 @@ def _run_bg_scrape(quick: bool = True):
                 increment_stat("jobs_scored")
                 job["id"] = job_id
                 score = job.get("ai_score") or 0
+                new_jobs.append(job)
 
                 # Queue high match for review / approval
                 if score >= 88 or (score >= threshold and require_approval):
@@ -136,8 +140,26 @@ def _run_bg_scrape(quick: bool = True):
                 if notify_telegram and score >= threshold:
                     try:
                         send_job_alert(job)
+                        new_high_matches.append(job)
                     except Exception as ex:
                         print(f"Telegram alert error: {ex}")
+
+        # At every scheduled cycle break (e.g. 6 hours), always send an interval status update to Telegram
+        if not quick and notify_telegram:
+            try:
+                from notifier.telegram_bot import send_cycle_summary
+                from tracker.database import get_stats_summary
+                current_stats = get_stats_summary()
+                int_hours = int(config.get("scheduler", {}).get("scrape_interval_hours", 6))
+                send_cycle_summary(
+                    new_jobs_count=len(new_jobs),
+                    total_scanned=len(filtered),
+                    top_matches=new_high_matches,
+                    stats=current_stats,
+                    interval_hours=int_hours
+                )
+            except Exception as se:
+                print(f"Telegram cycle summary error: {se}")
 
     except Exception as e:
         print(f"Background scrape error: {e}")
@@ -152,7 +174,7 @@ try:
     scheduler = BackgroundScheduler(daemon=True)
 
     _cfg = _get_config()
-    _interval_hours = int(_cfg.get("scheduler", {}).get("scrape_interval_hours", 2))
+    _interval_hours = int(_cfg.get("scheduler", {}).get("scrape_interval_hours", 6))
 
     # Automatically scrape and update Telegram: first scan 20s after launch, then every N hours
     scheduler.add_job(

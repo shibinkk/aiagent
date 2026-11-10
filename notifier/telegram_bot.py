@@ -8,6 +8,7 @@ import os
 import html
 import threading
 import time
+from datetime import datetime
 import requests
 from loguru import logger
 from dotenv import load_dotenv
@@ -311,3 +312,45 @@ def send_applied_notification(job: dict) -> bool:
         f"Score: {job.get('ai_score', 0):.0f}/100"
     )
     return send_message(msg)
+
+
+def send_cycle_summary(new_jobs_count: int, total_scanned: int,
+                       top_matches: list[dict], stats: dict,
+                       interval_hours: int = 6) -> bool:
+    """Send a scheduled interval scan update to Telegram at every cycle break."""
+    now_str = datetime.now().strftime("%I:%M %p")
+    header = f"🕒 <b>{interval_hours}-Hour Job Scan Update</b> ({now_str})\n\n"
+
+    if new_jobs_count > 0:
+        body = (
+            f"✨ <b>{new_jobs_count} fresh job(s)</b> discovered across platforms!\n"
+            f"🔍 Total listings scanned: {total_scanned}\n\n"
+        )
+        if top_matches:
+            body += "<b>Top Matches This Scan:</b>\n"
+            for j in top_matches[:3]:
+                t = html.escape(str(j.get("title") or ""))
+                c = html.escape(str(j.get("company") or ""))
+                s = int(j.get("ai_score") or 0)
+                u = j.get("job_url") or ""
+                link_part = f" — <a href=\"{u}\">View</a>" if u else ""
+                body += f"• <b>{t}</b> @ {c} (🎯 {s}%){link_part}\n"
+            body += "\n"
+    else:
+        body = (
+            f"✅ <b>Background Scan Complete</b>\n"
+            f"🔍 Active postings checked across LinkedIn, Indeed, Glassdoor, Naukri & Internshala.\n"
+            f"ℹ️ No new unlisted openings since last check ({stats.get('found', 0)} total roles tracked).\n\n"
+        )
+
+    pipeline = (
+        f"📊 <b>Current Pipeline:</b>\n"
+        f"Discovered: {stats.get('found', 0)} | "
+        f"Scored: {stats.get('scored', 0)} | "
+        f"Applied: {stats.get('applied', 0)} | "
+        f"In Review: {stats.get('pending_approval', 0)}\n\n"
+        f"🖥️ <a href=\"http://localhost:5000\">Open SDET Suite Dashboard</a>\n"
+        f"⏱️ <i>Next automated search in {interval_hours} hours</i>"
+    )
+
+    return send_message(header + body + pipeline)
