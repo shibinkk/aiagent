@@ -48,6 +48,16 @@ def _save_config(config: dict):
         yaml.dump(config, f, sort_keys=False, allow_unicode=True)
 
 
+def _safe_int(val: object, default: int) -> int:
+    """Safely cast YAML/config/env values to int with type narrowing for Pyrefly."""
+    if isinstance(val, (int, float, str)):
+        try:
+            return int(val)
+        except (ValueError, TypeError):
+            return default
+    return default
+
+
 def _run_bg_scrape(quick: bool = True):
     """
     Runs job scraping in the background.
@@ -98,7 +108,7 @@ def _run_bg_scrape(quick: bool = True):
         from ai_engine.scorer import score_job
         from ai_engine.cover_letter import generate_cover_letter
 
-        threshold = int(config.get("ai", {}).get("score_threshold", 65))
+        threshold = _safe_int(config.get("ai", {}).get("score_threshold"), 65)
         require_approval = config.get("apply", {}).get("require_approval", True)
         auto_apply = config.get("apply", {}).get("auto_apply", False)
         notify_telegram = config.get("notifications", {}).get("telegram", True)
@@ -150,7 +160,7 @@ def _run_bg_scrape(quick: bool = True):
                 from notifier.telegram_bot import send_cycle_summary
                 from tracker.database import get_stats_summary
                 current_stats = get_stats_summary()
-                int_hours = int(config.get("scheduler", {}).get("scrape_interval_hours", 6))
+                int_hours = _safe_int(config.get("scheduler", {}).get("scrape_interval_hours"), 6)
                 send_cycle_summary(
                     new_jobs_count=len(new_jobs),
                     total_scanned=len(filtered),
@@ -174,7 +184,7 @@ try:
     scheduler = BackgroundScheduler(daemon=True)
 
     _cfg = _get_config()
-    _interval_hours = int(_cfg.get("scheduler", {}).get("scrape_interval_hours", 6))
+    _interval_hours = _safe_int(_cfg.get("scheduler", {}).get("scrape_interval_hours"), 6)
 
     # Automatically scrape and update Telegram: first scan 20s after launch, then every N hours
     scheduler.add_job(
@@ -528,6 +538,6 @@ def api_toggle_auto_apply():
 
 
 if __name__ == "__main__":
-    port = int(os.getenv("DASHBOARD_PORT", 5000))
+    port = _safe_int(os.getenv("DASHBOARD_PORT"), 5000)
     print(f"\nDashboard running at http://localhost:{port}\n")
     app.run(host="0.0.0.0", port=port, debug=False)
